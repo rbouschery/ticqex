@@ -1,6 +1,3 @@
-/**
- * External service adapters (email, webhooks, etc.).
- * Phase 3 adds Resend under adapters/email/.
- */
-
-export {};
+export * from "./email/types";
+export { resendAdapter, createResendAdapter } from "./email/resend";
+export { sendOutboundEmailForMessage, enqueueOutboundEmail } from "./email/outbound";

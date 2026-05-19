@@ -58,20 +58,20 @@ Depends on: **Phase 0**
 
 ### Deliverables
 
-- [ ] Ticket CRUD + messages + find-or-create customer
-- [ ] Customer CRUD
-- [ ] Status types CRUD + reorder
-- [ ] Tags CRUD + ticket tagging
-- [ ] Custom field definitions CRUD
-- [ ] Custom field values read/write on tickets and customers
-- [ ] Global settings GET/PATCH
-- [ ] API key create/list/revoke
-- [ ] Auth middleware: staff JWT + API key
-- [ ] Ticket filtering (simple exact match, including custom fields)
-- [ ] `GET /tickets/:id/context` (copy for AI)
-- [ ] `GET /board` convenience endpoint
-- [ ] Input validation (Zod schemas)
-- [ ] Consistent error responses
+- [x] Ticket CRUD + messages + find-or-create customer
+- [x] Customer CRUD
+- [x] Status types CRUD + reorder
+- [x] Tags CRUD + ticket tagging
+- [x] Custom field definitions CRUD
+- [x] Custom field values read/write on tickets and customers
+- [x] Global settings GET/PATCH
+- [x] API key create/list/revoke
+- [x] Auth middleware: staff JWT + API key
+- [x] Ticket filtering (simple exact match, including custom fields)
+- [x] `GET /tickets/:id/context` (copy for AI)
+- [x] `GET /board` convenience endpoint
+- [x] Input validation (Zod schemas)
+- [x] Consistent error responses
 
 ### Exit criteria
 
@@ -144,17 +144,17 @@ See [INTEGRATIONS.md](./INTEGRATIONS.md) for full spec.
 
 ### Deliverables
 
-- [ ] Resend adapter (`/server/adapters/email/resend.ts`)
-- [ ] Resend inbound webhook endpoint
-- [ ] Trigger.dev: inbound email processing job
-  - [ ] Parse email → find/create customer → match/create ticket → create message
-  - [ ] Threading: Message-ID / In-Reply-To first, subject + customer fallback
-  - [ ] Parse email attachments → Supabase Storage
-- [ ] Trigger.dev: outbound email job
-  - [ ] On public message via admin/API → send via Resend
-  - [ ] Proper threading headers (`In-Reply-To`, `References`)
-- [ ] Email metadata stored on messages (`email_message_id`, etc.)
-- [ ] `email_threads` table populated for fallback matching
+- [x] Resend adapter (`/server/adapters/email/resend.ts`)
+- [x] Resend inbound webhook endpoint
+- [x] Trigger.dev: inbound email processing job
+  - [x] Parse email → find/create customer → match/create ticket → create message
+  - [x] Threading: Message-ID / In-Reply-To first, subject + customer fallback
+  - [x] Parse email attachments → Supabase Storage
+- [x] Trigger.dev: outbound email job
+  - [x] On public message via admin/API → send via Resend
+  - [x] Proper threading headers (`In-Reply-To`, `References`)
+- [x] Email metadata stored on messages (`email_message_id`, etc.)
+- [x] `email_threads` table populated for fallback matching
 
 ### Exit criteria
 

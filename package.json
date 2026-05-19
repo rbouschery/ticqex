@@ -11,14 +11,21 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:seed-admin": "tsx --env-file=.env.local scripts/seed.ts",
-    "supabase": "supabase"
+    "supabase": "supabase",
+    "trigger:dev": "npx trigger.dev@latest dev"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.0",
+    "@trigger.dev/sdk": "^4.4.6",
     "next": "16.2.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "resend": "^6.12.3",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

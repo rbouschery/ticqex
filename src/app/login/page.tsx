@@ -34,7 +34,7 @@ function LoginForm() {
       return;
     }
 
-    router.push("/");
+    router.push("/board");
     router.refresh();
   }
 

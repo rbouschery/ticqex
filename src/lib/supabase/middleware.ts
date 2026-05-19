@@ -4,7 +4,11 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  if (pathname === "/api/health") {
+  if (
+    pathname === "/api/health" ||
+    pathname.startsWith("/api/v1") ||
+    pathname.startsWith("/api/webhooks")
+  ) {
     return NextResponse.next({ request });
   }
 
@@ -60,7 +64,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isLogin) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/board";
     return NextResponse.redirect(url);
   }
 

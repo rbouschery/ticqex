@@ -1,6 +1,10 @@
-/**
- * Business logic layer. API routes call services; services use the admin Supabase client.
- * Phase 1 adds ticket, customer, and settings services.
- */
-
-export {};
+export * from "./tickets";
+export * from "./customers";
+export * from "./statuses";
+export * from "./tags";
+export * from "./settings";
+export * from "./api-keys";
+export * from "./users";
+export * from "./board";
+export * from "./custom-fields";
+export * from "./email-inbound";
