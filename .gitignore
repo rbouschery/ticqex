@@ -1,18 +1,27 @@
 # dependencies
 node_modules/
 .pnpm-store/
+/.pnp
+.pnp.*
 
 # next.js
 .next/
 out/
 
+# production
+/build
+
 # env
 .env
 .env*.local
+!.env.example
 
 # debug
 npm-debug.log*
 pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
 # misc
 .DS_Store
@@ -23,11 +32,12 @@ pnpm-debug.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # supabase
 .branches
 .temp
+supabase/.branches
+supabase/.temp
 
 # trigger.dev
 .trigger/

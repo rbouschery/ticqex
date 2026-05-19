@@ -30,16 +30,16 @@ Timelines are estimates for a solo/small team. Phases are sequential — each de
 
 ### Deliverables
 
-- [ ] Next.js app scaffold (App Router, TypeScript, Tailwind)
-- [ ] Supabase project linked (local dev + cloud)
-- [ ] Initial migration: all tables from [DATA-MODEL.md](./DATA-MODEL.md)
-- [ ] Seed script: default statuses, admin user, sample data
-- [ ] RLS enabled on all tables; service role for API
-- [ ] Auth: Supabase email/password login for staff
-- [ ] Service layer structure (`/server/services/`, `/server/adapters/`)
-- [ ] `/enterprise` directory with README explaining open-core boundary
-- [ ] MIT LICENSE in root
-- [ ] Health check: `GET /api/health`
+- [x] Next.js app scaffold (App Router, TypeScript, Tailwind)
+- [x] Supabase project linked (local dev + cloud)
+- [x] Initial migration: all tables from [DATA-MODEL.md](./DATA-MODEL.md)
+- [x] Seed script: default statuses, admin user, sample data
+- [x] RLS enabled on all tables; service role for API
+- [x] Auth: Supabase email/password login for staff
+- [x] Service layer structure (`/server/services/`, `/server/adapters/`)
+- [x] `/enterprise` directory with README explaining open-core boundary
+- [x] MIT LICENSE in root
+- [x] Health check: `GET /api/health`
 
 ### Exit criteria
 
