@@ -103,24 +103,24 @@ Depends on: **Phase 1**
 
 ### Deliverables
 
-- [ ] Staff login page
-- [ ] Kanban board view (`GET /board`)
-  - [ ] Lanes = status types (respect `visible_status_ids`)
-  - [ ] Ticket cards: title, preview, customer initials, assignee initials, custom fields, tags
-  - [ ] Drag-and-drop between lanes → `PATCH /tickets/:id` (status change)
-- [ ] Ticket detail panel/modal
-  - [ ] Message thread (public + internal, visually distinct)
-  - [ ] Reply box (public reply + internal note toggle)
-  - [ ] Edit title, assignee, tags, custom fields
-  - [ ] "Copy context" button → clipboard
-- [ ] Create ticket form (manual)
-- [ ] Settings pages (admin only)
-  - [ ] Status types management (add/reorder/color)
-  - [ ] Tags management
-  - [ ] Custom field definitions
-  - [ ] Board visibility settings
-  - [ ] API key management
-- [ ] Responsive layout (desktop-first; mobile usable)
+- [x] Staff login page
+- [x] Kanban board view (`GET /board`)
+  - [x] Lanes = status types (respect `visible_status_ids`)
+  - [x] Ticket cards: title, preview, customer initials, assignee initials, custom fields, tags
+  - [x] Drag-and-drop between lanes → `PATCH /tickets/:id` (status change)
+- [x] Ticket detail panel/modal
+  - [x] Message thread (public + internal, visually distinct)
+  - [x] Reply box (public reply + internal note toggle)
+  - [x] Edit title, assignee, tags, custom fields
+  - [x] "Copy context" button → clipboard
+- [x] Create ticket form (manual)
+- [x] Settings pages (admin only)
+  - [x] Status types management (add/reorder/color)
+  - [x] Tags management
+  - [x] Custom field definitions
+  - [x] Board visibility settings
+  - [x] API key management
+- [x] Responsive layout (desktop-first; mobile usable)
 
 ### Exit criteria
 
