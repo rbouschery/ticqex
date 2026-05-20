@@ -100,8 +100,8 @@ pnpm db:seed-admin
 
 # 4. App (pick one)
 pnpm dev              # enough when TRIGGER_SECRET_KEY is in .env.local / harness
-# Set TRIGGER_INLINE_INBOUND=true in .env.local to create tickets from webhooks without trigger:dev
-# pnpm dev:all        # only if you need the Trigger.dev dev worker AND CLI is logged in
+# pnpm dev:all        # Next + trigger:dev (requires `pnpm trigger:login` once per VM)
+# TRIGGER_INLINE_INBOUND=true — optional bypass if trigger:dev is not running (not recommended once Trigger is set up)
 
 # 5. Named tunnel (separate terminal or background)
 cloudflared tunnel run ticqex-dev
