@@ -22,7 +22,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (process.env.TRIGGER_SECRET_KEY) {
+  const queueViaTrigger =
+    process.env.TRIGGER_SECRET_KEY &&
+    process.env.TRIGGER_INLINE_INBOUND !== "true";
+
+  if (queueViaTrigger) {
     const { tasks } = await import("@trigger.dev/sdk/v3");
     await tasks.trigger("process-inbound-email", { raw: payload });
     return NextResponse.json({ accepted: true, queued: true });
