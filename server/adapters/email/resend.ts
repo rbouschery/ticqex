@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { createHmac, randomUUID, timingSafeEqual } from "crypto";
+import { randomUUID } from "crypto";
 import type {
   EmailAdapter,
   InboundWebhookPayload,
@@ -41,15 +41,22 @@ export function createResendAdapter(): EmailAdapter {
     },
 
     parseInbound(raw: InboundWebhookPayload): ParsedEmail {
-      const data = (raw.data ?? raw) as Record<string, unknown>;
+      const envelope = raw as Record<string, unknown>;
+      const data = (envelope.data ?? envelope) as Record<string, unknown>;
       const from = extractAddress(String(data.from ?? ""));
-      const to = extractAddress(String(data.to ?? ""));
+      const toRaw = data.to;
+      const to = extractAddress(
+        Array.isArray(toRaw) ? String(toRaw[0] ?? "") : String(toRaw ?? ""),
+      );
       const subject = String(data.subject ?? "(no subject)");
       const text = String(data.text ?? data.html ?? "");
       const headers = (data.headers ?? {}) as Record<string, string | string[]>;
 
       const messageId = String(
-        headers["message-id"] ?? headers["Message-ID"] ?? `<${randomUUID()}@inbound>`,
+        data.message_id ??
+          headers["message-id"] ??
+          headers["Message-ID"] ??
+          `<${randomUUID()}@inbound>`,
       );
       const inReplyTo = headers["in-reply-to"] ?? headers["In-Reply-To"];
       const referencesRaw = headers.references ?? headers.References;
@@ -89,14 +96,22 @@ export function createResendAdapter(): EmailAdapter {
 
     verifyWebhookSignature(payload: string, headers: Headers) {
       if (!webhookSecret) return process.env.NODE_ENV !== "production";
-      const signature = headers.get("svix-signature") ?? headers.get("resend-signature");
-      if (!signature) return false;
 
-      const expected = createHmac("sha256", webhookSecret).update(payload).digest("hex");
+      const id = headers.get("svix-id");
+      const timestamp = headers.get("svix-timestamp");
+      const signature = headers.get("svix-signature");
+      if (!id || !timestamp || !signature) return false;
+
       try {
-        return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+        const client = new Resend(apiKey ?? "re_placeholder");
+        client.webhooks.verify({
+          payload,
+          webhookSecret,
+          headers: { id, timestamp, signature },
+        });
+        return true;
       } catch {
-        return signature === expected || signature.includes(expected);
+        return false;
       }
     },
   };

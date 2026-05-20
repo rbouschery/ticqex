@@ -168,6 +168,20 @@ cloudflared tunnel info ticqex-dev
 | Event | `email.received` only |
 | Signing secret | → `RESEND_INBOUND_WEBHOOK_SECRET` in `.env.local` |
 
+**Register webhook (API)** — requires `RESEND_API_KEY` and a reachable `ENDPOINT` (tunnel + Next running):
+
+```bash
+pnpm resend:webhook          # creates webhook in Resend, writes signing_secret to .env.local
+pnpm resend:webhook:test     # Svix-signed smoke POST to localhost
+WEBHOOK_TEST_URL=https://readbetter.rbouschery.de pnpm resend:webhook:test
+```
+
+Override endpoint: `RESEND_INBOUND_WEBHOOK_URL=https://... pnpm resend:webhook`
+
+Add `RESEND_INBOUND_WEBHOOK_SECRET` to the Cursor Cloud harness after the first `pnpm resend:webhook` so restarts keep the same secret without re-registering.
+
+Inbound webhooks are verified with **Svix** headers (`svix-id`, `svix-timestamp`, `svix-signature`), not a plain HMAC of the body.
+
 **Inbound receiving** (MX/domain) must be enabled in Resend separately from the webhook.
 
 **Metadata-only webhooks:** `email.received` payloads do not include the body. Tickets may have an empty body until the app fetches content via the [Received emails API](https://resend.com/api-reference/emails/retrieve-received-email).
