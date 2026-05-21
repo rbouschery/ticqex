@@ -185,7 +185,7 @@ Inbound webhooks are verified with **Svix** headers (`svix-id`, `svix-timestamp`
 
 **Inbound receiving** (MX/domain) must be enabled in Resend separately from the webhook.
 
-**Metadata-only webhooks:** `email.received` payloads do not include the body. Tickets may have an empty body until the app fetches content via the [Received emails API](https://resend.com/api-reference/emails/retrieve-received-email).
+**Metadata-only webhooks:** `email.received` payloads do not include the body. The app calls `resend.emails.receiving.get(email_id)` in `resolveInbound()` before creating the ticket message.
 
 **Outbound test:** Sign in to admin → open a ticket whose customer `username` is a real email → post a **public** (non-internal) reply → check Resend dashboard and inbox.
 
