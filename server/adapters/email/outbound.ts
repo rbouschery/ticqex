@@ -1,11 +1,12 @@
 import { createAdminClient } from "@server/lib/supabase-admin";
 import { resendAdapter } from "./resend";
 import { outboundTriggerIdempotencyKey } from "./trigger-keys";
-
-const supportEmail = () =>
-  process.env.SUPPORT_EMAIL ?? "support@ticqex.local";
-const supportFromName = () =>
-  process.env.SUPPORT_FROM_NAME ?? "Support";
+import {
+  finalizeAttachmentUploads,
+  loadOutboundAttachments,
+} from "@server/services/attachment-uploads";
+import { ensureEmailThread } from "@server/services/email-threading";
+import { normalizeMessageId } from "@server/lib/utils";
 
 export async function sendOutboundEmailForMessage(messageId: string) {
   const db = createAdminClient();
@@ -18,19 +19,19 @@ export async function sendOutboundEmailForMessage(messageId: string) {
   if (!message || message.visibility !== "public") return;
   if (message.email_message_id) return;
 
+  const from = message.email_from as string | null;
+  const toList = (message.email_to ?? []) as string[];
+  const to = toList[0];
+  const cc = (message.email_cc ?? []) as string[];
+  const subject = message.email_subject as string | null;
+  if (!from || !to || !subject) return;
+
   const { data: ticket } = await db
     .from("tickets")
-    .select("id, title, customer_id")
+    .select("id")
     .eq("id", message.ticket_id)
     .single();
   if (!ticket) return;
-
-  const { data: customer } = await db
-    .from("customers")
-    .select("username")
-    .eq("id", ticket.customer_id)
-    .single();
-  if (!customer) return;
 
   const { data: threadMessages } = await db
     .from("messages")
@@ -44,21 +45,41 @@ export async function sendOutboundEmailForMessage(messageId: string) {
     .filter(Boolean) as string[];
 
   const lastRef = references[references.length - 1];
-  const from = `${supportFromName()} <${supportEmail()}>`;
 
-  const { messageId: sentMessageId } = await resendAdapter.send({
-    to: customer.username,
+  const staged = await loadOutboundAttachments(messageId);
+
+  const { messageId: sentMessageId, resendId } = await resendAdapter.send({
+    to,
     from,
-    subject: `Re: ${ticket.title}`,
+    cc: cc.length ? cc : undefined,
+    subject,
     body: message.body,
+    html: message.email_body_html ?? undefined,
     inReplyTo: lastRef,
     references: references.length ? references : undefined,
+    attachments: staged.map((att) => ({
+      filename: att.filename,
+      contentType: att.contentType,
+      content: att.content,
+    })),
   });
+
+  const canonicalMessageId = normalizeMessageId(sentMessageId);
 
   await db
     .from("messages")
-    .update({ email_message_id: sentMessageId })
+    .update({
+      email_message_id: canonicalMessageId,
+      email_delivery_status: "sent",
+      resend_outbound_id: resendId ?? null,
+    })
     .eq("id", messageId);
+
+  if (subject) {
+    await ensureEmailThread(ticket.id, subject, canonicalMessageId);
+  }
+
+  await finalizeAttachmentUploads(ticket.id, messageId, staged);
 }
 
 export async function enqueueOutboundEmail(messageId: string) {

@@ -1,10 +1,51 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { X } from "lucide-react";
+import { CopyIcon } from "@phosphor-icons/react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, apiFetchText } from "@/lib/api-client";
-import type { TicketDetail } from "./types";
+import { EmailConversationPanel } from "./email-conversation-panel";
+import { TaskTicketPanel } from "./task-ticket-panel";
+import type {
+  EmailComposePayload,
+  TicketDetail,
+} from "./types";
+import {
+  isConversationDetail,
+  isTaskDetail,
+} from "./types";
 
 type StaffUser = { id: string; username: string };
+
+const UNASSIGNED = "__unassigned__";
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return true;
+  return target.isContentEditable;
+}
+
 export function TicketModal({
   ticketId,
   onClose,
@@ -16,9 +57,9 @@ export function TicketModal({
 }) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [users, setUsers] = useState<StaffUser[]>([]);
-  const [reply, setReply] = useState("");
   const [internal, setInternal] = useState(false);
   const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [tagInput, setTagInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -35,21 +76,25 @@ export function TicketModal({
       ]);
       setTicket(t);
       setTitle(t.title);
+      setBody(isTaskDetail(t) ? (t.body ?? "") : "");
       setAssigneeId(t.assignee_id ?? "");
       setTagInput(t.tags.map((x) => x.name).join(", "));
       setUsers(staff);
-      await apiFetch(`/api/v1/tickets/${ticketId}/read`, { method: "POST" });
-      setTicket((prev) =>
-        prev
-          ? {
-              ...prev,
-              unread_count: 0,
-              messages: prev.messages.map((msg) =>
-                msg.author_type === "customer" ? { ...msg, read: true } : msg,
-              ),
-            }
-          : prev,
-      );
+
+      if (isConversationDetail(t)) {
+        await apiFetch(`/api/v1/tickets/${ticketId}/read`, { method: "POST" });
+        setTicket((prev) =>
+          prev && isConversationDetail(prev)
+            ? {
+                ...prev,
+                unread_count: 0,
+                messages: prev.messages.map((msg) =>
+                  msg.author_type === "customer" ? { ...msg, read: true } : msg,
+                ),
+              }
+            : prev,
+        );
+      }
       onBoardChange();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load ticket");
@@ -63,6 +108,19 @@ export function TicketModal({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "x" && e.key !== "X") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isEditableTarget(e.target)) return;
+      e.preventDefault();
+      onClose();
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   async function saveMeta() {
     if (!ticket) return;
     setSaving(true);
@@ -72,13 +130,17 @@ export function TicketModal({
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
+      const payload: Record<string, unknown> = {
+        title,
+        assignee_id: assigneeId || null,
+        tags,
+      };
+      if (isTaskDetail(ticket)) {
+        payload.body = body;
+      }
       await apiFetch(`/api/v1/tickets/${ticketId}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          title,
-          assignee_id: assigneeId || null,
-          tags,
-        }),
+        body: JSON.stringify(payload),
       });
       await load();
     } catch (e) {
@@ -88,24 +150,18 @@ export function TicketModal({
     }
   }
 
-  async function sendReply(e: FormEvent) {
-    e.preventDefault();
-    if (!reply.trim()) return;
+  async function sendEmailReply(payload: EmailComposePayload) {
     setSaving(true);
     setError(null);
     try {
       await apiFetch(`/api/v1/tickets/${ticketId}/messages`, {
         method: "POST",
-        body: JSON.stringify({
-          body: reply,
-          visibility: internal ? "internal" : "public",
-          channel: "admin",
-        }),
+        body: JSON.stringify(payload),
       });
-      setReply("");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reply failed");
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -124,7 +180,7 @@ export function TicketModal({
         { method: "PATCH" },
       );
       setTicket((prev) =>
-        prev
+        prev && isConversationDetail(prev)
           ? {
               ...prev,
               messages: prev.messages.map((msg) =>
@@ -140,189 +196,137 @@ export function TicketModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl dark:bg-zinc-900">
-        <header className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-          <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">
-            Ticket
-          </h2>
-          <div className="flex gap-2">
-            <button
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
+        showCloseButton={false}
+      >
+        <DialogHeader className="flex-row items-center justify-between border-b border-border px-4 py-3">
+          <DialogTitle>Ticket</DialogTitle>
+          <div className="flex items-center gap-2">
+            <Button
               type="button"
-              onClick={() => copyContext(false)}
-              className="text-xs text-indigo-600 hover:underline"
+              variant="ghost"
+              size="sm"
+              onClick={() => void copyContext(false)}
             >
+              <CopyIcon />
               Copy context
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={onClose}
-              className="text-sm text-zinc-500 hover:text-zinc-800"
+              aria-label="Close"
             >
-              Close
-            </button>
+              <X />
+            </Button>
           </div>
-        </header>
+        </DialogHeader>
 
         {loading && (
-          <p className="p-6 text-sm text-zinc-500">Loading…</p>
+          <div className="space-y-3 p-6">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-24 w-full" />
+          </div>
         )}
 
         {!loading && ticket && (
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="space-y-3 border-b border-zinc-200 p-4 dark:border-zinc-800">
-              <input
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="space-y-3 border-b border-border p-4">
+              <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
               />
-              <div className="flex flex-wrap gap-2 text-sm">
-                <span className="text-zinc-500">
-                  Customer: {ticket.customer?.username}
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                {isTaskDetail(ticket) ? (
+                  <Badge variant="outline">Task</Badge>
+                ) : (
+                  <Badge variant="secondary">Email conversation</Badge>
+                )}
+                {ticket.customer && (
+                  <>
+                    <Separator orientation="vertical" className="h-4" />
+                    <span className="text-muted-foreground">
+                      {isConversationDetail(ticket) && ticket.contact_address
+                        ? ticket.contact_address
+                        : ticket.customer.username}
+                    </span>
+                  </>
+                )}
+                <Separator orientation="vertical" className="h-4" />
+                <span className="text-muted-foreground">
+                  Status: {ticket.status?.name}
                 </span>
-                <span className="text-zinc-500">Status: {ticket.status?.name}</span>
               </div>
-              <label className="block text-xs text-zinc-500">
-                Assignee
-                <select
-                  value={assigneeId}
-                  onChange={(e) => setAssigneeId(e.target.value)}
-                  className="mt-1 block w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              <div className="space-y-2">
+                <Label>Assignee</Label>
+                <Select
+                  value={assigneeId || UNASSIGNED}
+                  onValueChange={(v) =>
+                    setAssigneeId(v === UNASSIGNED ? "" : v)
+                  }
                 >
-                  <option value="">Unassigned</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.username}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-xs text-zinc-500">
-                Tags (comma-separated)
-                <input
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.username}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Tags (comma-separated)</Label>
+                <Input
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
-                  className="mt-1 block w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
                 />
-              </label>
-              <button
+              </div>
+              <Button
                 type="button"
+                size="sm"
                 disabled={saving}
                 onClick={() => void saveMeta()}
-                className="rounded bg-zinc-800 px-3 py-1 text-xs text-white disabled:opacity-50"
               >
                 Save details
-              </button>
+              </Button>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
-              {ticket.messages.map((msg) => {
-                const isIncoming = msg.author_type === "customer";
-                const isUnread = isIncoming && msg.read === false;
-
-                return (
-                  <div
-                    key={msg.id}
-                    role={isIncoming ? "button" : undefined}
-                    tabIndex={isIncoming ? 0 : undefined}
-                    onClick={
-                      isIncoming
-                        ? () => void toggleMessageRead(msg.id)
-                        : undefined
-                    }
-                    onKeyDown={
-                      isIncoming
-                        ? (e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              void toggleMessageRead(msg.id);
-                            }
-                          }
-                        : undefined
-                    }
-                    className={`rounded-lg p-3 text-sm ${
-                      msg.visibility === "internal"
-                        ? "border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40"
-                        : isUnread
-                          ? "border border-indigo-200 bg-indigo-50/80 dark:border-indigo-900 dark:bg-indigo-950/30"
-                          : "bg-zinc-50 dark:bg-zinc-800/50"
-                    } ${isIncoming ? "cursor-pointer hover:ring-1 hover:ring-indigo-300 dark:hover:ring-indigo-700" : ""}`}
-                  >
-                    <div className="mb-1 flex justify-between text-xs text-zinc-500">
-                      <span className="flex items-center gap-1.5">
-                        {isIncoming && (
-                          <span
-                            className={`inline-block h-2 w-2 shrink-0 rounded-full ${
-                              isUnread ? "bg-indigo-600" : "bg-zinc-300 dark:bg-zinc-600"
-                            }`}
-                            aria-hidden="true"
-                          />
-                        )}
-                        <span>
-                          {msg.author_type}
-                          {msg.visibility === "internal" && " · internal"}
-                          {isIncoming && (isUnread ? " · unread" : " · read")}
-                        </span>
-                      </span>
-                      <time dateTime={msg.created_at}>
-                        {new Date(msg.created_at).toLocaleString()}
-                      </time>
-                    </div>
-                    <p
-                      className={`whitespace-pre-wrap text-zinc-800 dark:text-zinc-200 ${
-                        isUnread ? "font-medium" : ""
-                      }`}
-                    >
-                      {msg.body}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <form
-              onSubmit={sendReply}
-              className="border-t border-zinc-200 p-4 dark:border-zinc-800"
-            >
-              <textarea
-                value={reply}
-                onChange={(e) => setReply(e.target.value)}
-                rows={3}
-                placeholder="Write a reply…"
-                className="w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            {isTaskDetail(ticket) ? (
+              <TaskTicketPanel
+                ticket={ticket}
+                body={body}
+                onBodyChange={setBody}
               />
-              <div className="mt-2 flex items-center justify-between">
-                <label className="flex items-center gap-2 text-xs text-zinc-600">
-                  <input
-                    type="checkbox"
-                    checked={internal}
-                    onChange={(e) => setInternal(e.target.checked)}
-                  />
-                  Internal note
-                </label>
-                <button
-                  type="submit"
-                  disabled={saving || !reply.trim()}
-                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-                >
-                  Send
-                </button>
-              </div>
-            </form>
+            ) : (
+              <EmailConversationPanel
+                ticket={ticket}
+                ticketId={ticketId}
+                internal={internal}
+                onInternalChange={setInternal}
+                onSubmit={sendEmailReply}
+                saving={saving}
+                onToggleMessageRead={(id) => void toggleMessageRead(id)}
+              />
+            )}
           </div>
         )}
 
         {error && (
-          <p className="px-4 pb-3 text-sm text-red-600" role="alert">
-            {error}
-          </p>
+          <div className="px-4 pb-3">
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
-

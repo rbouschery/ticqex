@@ -77,6 +77,9 @@ async function main() {
     .from("tickets")
     .insert({
       title: "Read/unread smoke test",
+      kind: "conversation",
+      channel: "email",
+      contact_address: "smoke-test@ticqex.local",
       customer_id: customer.id,
       status_id: status.id,
       origin: "manual",

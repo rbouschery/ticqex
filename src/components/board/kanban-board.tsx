@@ -9,6 +9,10 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import { PlusIcon } from "@phosphor-icons/react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api-client";
 import { TicketCard } from "./ticket-card";
 import { LaneColumn } from "./lane-column";
@@ -102,7 +106,14 @@ export function KanbanBoard() {
   if (loading) {
     return (
       <>
-        <p className="p-8 text-center text-zinc-500">Loading board…</p>
+        <div className="space-y-4 p-8">
+          <Skeleton className="h-8 w-48" />
+          <div className="flex gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-96 w-72 shrink-0 rounded-xl" />
+            ))}
+          </div>
+        </div>
         {selectedId && (
           <TicketModal
             ticketId={selectedId}
@@ -116,25 +127,24 @@ export function KanbanBoard() {
 
   if (error) {
     return (
-      <p className="p-8 text-center text-red-600" role="alert">
-        {error}
-      </p>
+      <div className="p-8">
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
   return (
     <>
-      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <h1 className="font-heading text-lg font-semibold text-foreground">
           Support board
         </h1>
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-        >
-          New ticket
-        </button>
+        <Button size="sm" onClick={() => setShowCreate(true)}>
+          <PlusIcon />
+          New task
+        </Button>
       </div>
 
       <DndContext

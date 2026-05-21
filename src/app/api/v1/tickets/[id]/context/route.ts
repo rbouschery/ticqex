@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { withAuth } from "@server/lib/route-handler";
-import { getTicketContext } from "@server/services/tickets";
+import { getTicketContext } from "@server/services/ticket-context";
 
 type Params = { params: Promise<{ id: string }> };
 

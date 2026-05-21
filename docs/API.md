@@ -117,26 +117,23 @@ On write, same shape — only include fields you want to set/update.
 
 **Create ticket:**
 
+**Task ticket:**
+
 ```json
 POST /api/v1/tickets
 {
-  "title": "Emails not sending",
+  "kind": "task",
+  "title": "Fix billing export",
+  "body": "Optional description",
   "customer": { "username": "user@example.com" },
   "status_id": "uuid",
-  "assignee_id": "uuid",
-  "origin": "api",
-  "tags": ["bug"],
-  "message": {
-    "body": "Since yesterday our transactional emails stopped...",
-    "visibility": "public"
-  },
-  "custom_fields": {
-    "plan": "Unlimited"
-  }
+  "origin": "manual"
 }
 ```
 
-`customer.username` triggers find-or-create. If `status_id` omitted, defaults to first status.
+**Email conversations** are created by inbound email (Resend webhook → Trigger), not via `POST /api/v1/tickets`. Only `kind: "task"` is accepted on create.
+
+`kind` is required (no default). If `status_id` omitted, defaults to first status.
 
 **Update ticket (partial):**
 
@@ -167,7 +164,7 @@ POST /api/v1/tickets/:ticketId/messages
 }
 ```
 
-When `visibility: "public"` and ticket originated from email, triggers outbound email via Trigger.dev. See [INTEGRATIONS.md](./INTEGRATIONS.md#outbound-email).
+When `visibility: "public"` on a conversation with `channel: "email"`, agent replies trigger outbound email via Trigger.dev. Task tickets reject `POST …/messages`. See [INTEGRATIONS.md](./INTEGRATIONS.md#outbound-email).
 
 ### Customers
 

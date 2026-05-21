@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@server/lib/supabase-admin";
 import { ApiError } from "@server/lib/errors";
@@ -85,18 +86,26 @@ async function authViaJwt(token: string): Promise<AuthContext | null> {
   };
 }
 
-async function authViaCookies(request: NextRequest): Promise<AuthContext | null> {
+async function authViaCookies(): Promise<AuthContext | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) return null;
 
+  const cookieStore = await cookies();
+
   const supabase = createServerClient(url, anonKey, {
     cookies: {
       getAll() {
-        return request.cookies.getAll();
+        return cookieStore.getAll();
       },
-      setAll() {
-        // API routes are read-only for session refresh
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options),
+          );
+        } catch {
+          // Server Components cannot set cookies; middleware refreshes on navigation
+        }
       },
     },
   });
@@ -134,7 +143,7 @@ export async function authenticateRequest(
     if (viaJwt) return viaJwt;
   }
 
-  const viaCookies = await authViaCookies(request);
+  const viaCookies = await authViaCookies();
   if (viaCookies) return viaCookies;
 
   throw ApiError.unauthorized();

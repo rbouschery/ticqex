@@ -9,6 +9,8 @@ export interface OutboundEmail {
   from: string;
   subject: string;
   body: string;
+  html?: string;
+  cc?: string[];
   inReplyTo?: string;
   references?: string[];
   attachments?: Attachment[];
@@ -23,9 +25,12 @@ export interface ParsedAttachment {
 
 export interface ParsedEmail {
   from: string;
-  to: string;
+  fromName?: string;
+  to: string[];
+  cc: string[];
   subject: string;
   body: string;
+  bodyHtml?: string;
   messageId: string;
   /** Resend receiving email id from email.received webhooks (stable across retries). */
   resendEmailId?: string;
@@ -37,7 +42,7 @@ export interface ParsedEmail {
 export type InboundWebhookPayload = Record<string, unknown>;
 
 export interface EmailAdapter {
-  send(params: OutboundEmail): Promise<{ messageId: string }>;
+  send(params: OutboundEmail): Promise<{ messageId: string; resendId?: string }>;
   parseInbound(raw: InboundWebhookPayload): ParsedEmail;
   /** Fetches full body (and headers) from Resend when the webhook only includes metadata. */
   resolveInbound(raw: InboundWebhookPayload): Promise<ParsedEmail>;

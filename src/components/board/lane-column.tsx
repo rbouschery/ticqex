@@ -1,6 +1,8 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { TicketCard } from "./ticket-card";
 import type { BoardLane } from "./types";
 
@@ -16,22 +18,23 @@ export function LaneColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`flex w-72 shrink-0 flex-col rounded-xl bg-zinc-100/80 dark:bg-zinc-900/50 ${
-        isOver ? "ring-2 ring-indigo-400" : ""
-      }`}
+      className={cn(
+        "flex w-72 shrink-0 flex-col rounded-xl bg-muted/50 ring-1 ring-foreground/5",
+        isOver && "ring-2 ring-ring",
+      )}
     >
       <header
-        className="flex items-center gap-2 border-t-[3px] border-b border-zinc-200 px-3 py-2 dark:border-zinc-800"
-        style={{ borderTopColor: lane.status.color }}
+        className="flex items-center gap-2 border-b border-border px-3 py-2"
+        style={{ borderTopWidth: 3, borderTopStyle: "solid", borderTopColor: lane.status.color }}
       >
         <span
-          className="h-2 w-2 rounded-full"
+          className="size-2 rounded-full"
           style={{ backgroundColor: lane.status.color }}
         />
-        <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          {lane.status.name}
-        </h2>
-        <span className="ml-auto text-xs text-zinc-500">{lane.tickets.length}</span>
+        <h2 className="text-sm font-medium text-foreground">{lane.status.name}</h2>
+        <Badge variant="secondary" className="ml-auto">
+          {lane.tickets.length}
+        </Badge>
       </header>
       <div className="flex flex-1 flex-col gap-2 p-2">
         {lane.tickets.map((ticket) => (

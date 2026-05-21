@@ -1,13 +1,26 @@
 import { createAdminClient } from "@server/lib/supabase-admin";
 import { ApiError } from "@server/lib/errors";
-import { normalizeEmailSubject } from "@server/lib/utils";
+import { normalizeEmailSubject, normalizeMessageId } from "@server/lib/utils";
 import { findOrCreateCustomer } from "@server/services/customers";
 import { getDefaultStatusId } from "@server/services/statuses";
-import { createMessage } from "@server/services/tickets";
+import { createInboundCustomerMessage } from "@server/services/messages";
+import {
+  ensureEmailThread,
+  findTicketByMessageHeaders,
+  findTicketBySubjectAndContact,
+} from "@server/services/email-threading";
+import { persistMessageAttachment } from "@server/services/attachment-uploads";
 import type { ParsedEmail } from "@server/adapters/email/types";
 
 function isSyntheticMessageId(messageId: string) {
   return messageId.endsWith("@inbound>");
+}
+
+function formatInboundFrom(parsed: ParsedEmail): string {
+  if (parsed.fromName) {
+    return `${parsed.fromName} <${parsed.from}>`;
+  }
+  return parsed.from;
 }
 
 async function findExistingInboundMessage(parsed: ParsedEmail) {
@@ -23,56 +36,17 @@ async function findExistingInboundMessage(parsed: ParsedEmail) {
   }
 
   if (parsed.messageId && !isSyntheticMessageId(parsed.messageId)) {
+    const variants = [
+      parsed.messageId,
+      normalizeMessageId(parsed.messageId),
+    ];
     const { data } = await db
       .from("messages")
       .select("id, ticket_id")
-      .eq("email_message_id", parsed.messageId)
+      .in("email_message_id", [...new Set(variants)])
+      .limit(1)
       .maybeSingle();
     if (data) return data;
-  }
-
-  return null;
-}
-
-async function findTicketByMessageHeaders(parsed: ParsedEmail) {
-  const db = createAdminClient();
-  const ids = [parsed.inReplyTo, ...(parsed.references ?? [])].filter(
-    Boolean,
-  ) as string[];
-
-  if (!ids.length) return null;
-
-  const { data } = await db
-    .from("messages")
-    .select("ticket_id")
-    .in("email_message_id", ids)
-    .limit(1)
-    .maybeSingle();
-
-  return data?.ticket_id ?? null;
-}
-
-async function findTicketBySubjectCustomer(
-  subject: string,
-  customerId: string,
-) {
-  const db = createAdminClient();
-  const normalized = normalizeEmailSubject(subject);
-
-  const { data: threads } = await db
-    .from("email_threads")
-    .select("ticket_id")
-    .eq("subject", normalized)
-    .limit(20);
-
-  for (const row of threads ?? []) {
-    const { data: ticket } = await db
-      .from("tickets")
-      .select("id")
-      .eq("id", row.ticket_id)
-      .eq("customer_id", customerId)
-      .maybeSingle();
-    if (ticket) return ticket.id;
   }
 
   return null;
@@ -84,28 +58,16 @@ async function storeAttachments(
   attachments: ParsedEmail["attachments"],
 ) {
   if (!attachments.length) return;
-  const db = createAdminClient();
 
   for (const att of attachments) {
-    const path = `attachments/${ticketId}/${messageId}/${att.filename}`;
-    const { error: uploadError } = await db.storage
-      .from("attachments")
-      .upload(path, att.content, {
-        contentType: att.contentType,
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error("Attachment upload failed:", uploadError.message);
-      continue;
-    }
-
-    await db.from("attachments").insert({
-      message_id: messageId,
+    await persistMessageAttachment({
+      ticketId,
+      messageId,
       filename: att.filename,
-      content_type: att.contentType,
-      size_bytes: att.sizeBytes,
-      storage_path: path,
+      contentType: att.contentType,
+      content: att.content,
+      sizeBytes: att.sizeBytes,
+      upsert: true,
     });
   }
 }
@@ -125,19 +87,30 @@ export async function processInboundEmail(parsed: ParsedEmail) {
 
   const customer = await findOrCreateCustomer(parsed.from);
 
-  let ticketId = await findTicketByMessageHeaders(parsed);
+  let ticketId = await findTicketByMessageHeaders(
+    parsed.inReplyTo,
+    parsed.references,
+  );
   if (!ticketId) {
-    ticketId = await findTicketBySubjectCustomer(parsed.subject, customer.id);
+    ticketId = await findTicketBySubjectAndContact(
+      parsed.subject,
+      parsed.from,
+      customer.id,
+    );
   }
 
   let isNew = false;
   if (!ticketId) {
     isNew = true;
     const statusId = await getDefaultStatusId();
+    const contactAddress = parsed.from.trim().toLowerCase();
     const { data: ticket, error } = await db
       .from("tickets")
       .insert({
         title: normalizeEmailSubject(parsed.subject) || parsed.subject,
+        kind: "conversation",
+        channel: "email",
+        contact_address: contactAddress,
         customer_id: customer.id,
         status_id: statusId,
         origin: "email",
@@ -147,30 +120,27 @@ export async function processInboundEmail(parsed: ParsedEmail) {
     if (error) throw ApiError.internal(error.message);
     ticketId = ticket.id;
 
-    await db.from("email_threads").insert({
-      ticket_id: ticketId,
-      root_message_id: parsed.messageId,
-      subject: normalizeEmailSubject(parsed.subject),
-    });
+    await ensureEmailThread(
+      ticketId,
+      parsed.subject,
+      parsed.messageId,
+    );
+  } else {
+    await ensureEmailThread(ticketId, parsed.subject, parsed.messageId);
   }
 
-  const { message } = await createMessage(ticketId, {
+  const { message } = await createInboundCustomerMessage(ticketId, {
     body: parsed.body,
-    visibility: "public",
-    channel: "email",
-    authorType: "customer",
     authorId: customer.id,
     emailMessageId: parsed.messageId,
     emailInReplyTo: parsed.inReplyTo,
+    emailFrom: formatInboundFrom(parsed),
+    emailTo: parsed.to,
+    emailCc: parsed.cc,
+    emailSubject: parsed.subject,
+    emailBodyHtml: parsed.bodyHtml ?? null,
+    resendInboundId: parsed.resendEmailId ?? null,
   });
-
-  await db
-    .from("messages")
-    .update({
-      email_message_id: parsed.messageId,
-      resend_inbound_id: parsed.resendEmailId ?? null,
-    })
-    .eq("id", message.id);
 
   await storeAttachments(ticketId, message.id, parsed.attachments);
 

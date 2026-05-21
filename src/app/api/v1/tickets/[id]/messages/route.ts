@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { jsonData } from "@server/lib/response";
 import { withAuth, parseJsonBody } from "@server/lib/route-handler";
 import { messageInputSchema, parseBody } from "@server/lib/validation/schemas";
-import { listMessages, createMessage } from "@server/services/tickets";
+import { createAgentReply, listMessages } from "@server/services/messages";
 import { enqueueOutboundEmail } from "@server/adapters/email/outbound";
 
 type Params = { params: Promise<{ id: string }> };
@@ -18,12 +18,13 @@ export async function POST(request: NextRequest, { params }: Params) {
   return withAuth(request, async (auth) => {
     const { id } = await params;
     const body = parseBody(messageInputSchema, await parseJsonBody(request));
-    const { message, shouldSendEmail } = await createMessage(
+    const { message, shouldSendEmail } = await createAgentReply(
       id,
       {
         body: body.body,
         visibility: body.visibility,
         channel: body.channel ?? "admin",
+        email: body.email,
       },
       auth,
     );

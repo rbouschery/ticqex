@@ -2,8 +2,13 @@ import { runs, tasks } from "@trigger.dev/sdk/v3";
 
 const STUCK_STATUSES = new Set(["DEQUEUED", "QUEUED", "PENDING_VERSION"]);
 const EMAIL_TASKS = new Set(["process-inbound-email", "send-outbound-email"]);
-const STUCK_MS = 20_000;
-const POLL_MS = 15_000;
+/** Inbound email: recover faster — Resend webhook 200 only means queued, not processed. */
+const STUCK_MS_BY_TASK: Record<string, number> = {
+  "process-inbound-email": 12_000,
+  "send-outbound-email": 20_000,
+};
+const DEFAULT_STUCK_MS = 20_000;
+const POLL_MS = 10_000;
 
 /** Runs we already spawned a recovery trigger for (avoid loops). */
 const recoveryAttempted = new Set<string>();
@@ -18,7 +23,8 @@ async function recoverStuckRuns() {
     if (recoveryAttempted.has(run.id)) continue;
 
     const ageMs = Date.now() - new Date(run.createdAt).getTime();
-    if (ageMs < STUCK_MS) continue;
+    const stuckMs = STUCK_MS_BY_TASK[run.taskIdentifier] ?? DEFAULT_STUCK_MS;
+    if (ageMs < stuckMs) continue;
 
     const full = await runs.retrieve(run.id);
     const payload = full.payload as Record<string, unknown> | undefined;

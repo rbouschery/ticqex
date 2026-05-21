@@ -3,12 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const isHealth = pathname === "/api/health";
+  const isWebhook = pathname.startsWith("/api/webhooks");
+  const isApiV1 = pathname.startsWith("/api/v1");
 
-  if (
-    pathname === "/api/health" ||
-    pathname.startsWith("/api/v1") ||
-    pathname.startsWith("/api/webhooks")
-  ) {
+  if (isHealth || isWebhook) {
     return NextResponse.next({ request });
   }
 
@@ -16,7 +15,7 @@ export async function updateSession(request: NextRequest) {
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ) {
-    if (pathname.startsWith("/login")) {
+    if (pathname.startsWith("/login") || isApiV1) {
       return NextResponse.next({ request });
     }
     const url = request.nextUrl.clone();
@@ -51,10 +50,13 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isLogin = request.nextUrl.pathname.startsWith("/login");
-  const isPublicApi =
-    request.nextUrl.pathname === "/api/health" ||
-    request.nextUrl.pathname.startsWith("/api/auth");
+  // API routes: refresh session cookies, but let handlers return 401 JSON
+  if (isApiV1) {
+    return supabaseResponse;
+  }
+
+  const isLogin = pathname.startsWith("/login");
+  const isPublicApi = pathname.startsWith("/api/auth");
 
   if (!user && !isLogin && !isPublicApi) {
     const url = request.nextUrl.clone();

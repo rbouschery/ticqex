@@ -2,6 +2,18 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useActionState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { login, type LoginState } from "./actions";
 
 function LoginForm() {
@@ -14,57 +26,65 @@ function LoginForm() {
   );
 
   return (
-    <form action={formAction} className="mt-6 space-y-4">
-      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-        Email
-        <input
+    <form action={formAction} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
           type="email"
           name="email"
           required
           autoComplete="email"
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
         />
-      </label>
-      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-        Password
-        <input
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <Input
+          id="password"
           type="password"
           name="password"
           required
           autoComplete="current-password"
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
         />
-      </label>
+      </div>
 
       {state.error && (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-          {state.error}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-      >
+      <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Signing in…" : "Sign in"}
-      </button>
+      </Button>
     </form>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
-      <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-          Ticqex
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500">Staff sign in</p>
-        <Suspense fallback={<p className="mt-6 text-sm text-zinc-500">Loading…</p>}>
-          <LoginForm />
-        </Suspense>
-      </div>
+    <div className="flex flex-1 items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Ticqex</CardTitle>
+          <CardDescription>Staff sign in</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Suspense
+            fallback={
+              <div className="space-y-4">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            }
+          >
+            <LoginForm />
+          </Suspense>
+        </CardContent>
+      </Card>
     </div>
   );
 }

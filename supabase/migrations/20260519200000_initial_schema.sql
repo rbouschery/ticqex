@@ -3,6 +3,7 @@
 
 -- Enums
 CREATE TYPE public.user_role AS ENUM ('admin', 'agent');
+CREATE TYPE public.ticket_kind AS ENUM ('task', 'conversation');
 CREATE TYPE public.ticket_origin AS ENUM ('manual', 'api', 'email');
 CREATE TYPE public.message_visibility AS ENUM ('public', 'internal');
 CREATE TYPE public.message_author_type AS ENUM ('customer', 'agent', 'system');
@@ -49,15 +50,35 @@ CREATE TABLE public.tags (
 CREATE TABLE public.tickets (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
-  customer_id uuid NOT NULL REFERENCES public.customers (id) ON DELETE RESTRICT,
+  kind public.ticket_kind NOT NULL,
+  body text,
+  channel text,
+  contact_address text,
+  customer_id uuid REFERENCES public.customers (id) ON DELETE RESTRICT,
   status_id uuid NOT NULL REFERENCES public.status_types (id) ON DELETE RESTRICT,
   assignee_id uuid REFERENCES public.users (id) ON DELETE SET NULL,
   origin public.ticket_origin NOT NULL DEFAULT 'manual',
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT tickets_task_shape_check CHECK (
+    kind = 'conversation'
+    OR (channel IS NULL AND contact_address IS NULL)
+  ),
+  CONSTRAINT tickets_conversation_shape_check CHECK (
+    kind = 'task'
+    OR (
+      channel IS NOT NULL
+      AND contact_address IS NOT NULL
+      AND customer_id IS NOT NULL
+      AND body IS NULL
+    )
+  )
 );
 
 CREATE INDEX tickets_customer_id_idx ON public.tickets (customer_id);
+CREATE INDEX tickets_kind_idx ON public.tickets (kind);
+CREATE INDEX tickets_contact_address_idx ON public.tickets (contact_address)
+  WHERE contact_address IS NOT NULL;
 CREATE INDEX tickets_status_id_idx ON public.tickets (status_id);
 CREATE INDEX tickets_assignee_id_idx ON public.tickets (assignee_id);
 CREATE INDEX tickets_created_at_idx ON public.tickets (created_at);

@@ -20,6 +20,39 @@ export function normalizeEmailSubject(subject: string): string {
   return s;
 }
 
+/** Canonical form for comparing/storing RFC Message-IDs. */
+export function normalizeMessageId(id: string): string {
+  const bare = id.trim().replace(/^<|>$/g, "").trim();
+  if (!bare) return id.trim();
+  return `<${bare}>`;
+}
+
+export function expandMessageIdVariants(id: string): string[] {
+  const trimmed = id.trim();
+  if (!trimmed) return [];
+  const canonical = normalizeMessageId(trimmed);
+  const bare = canonical.replace(/^<|>$/g, "");
+  return [...new Set([trimmed, canonical, bare, `<${bare}>`])];
+}
+
+export { formatReplySubject } from "@server/lib/format-subject";
+
+export function buildQuotedReply(
+  previousBody: string,
+  authorLabel: string,
+  dateIso: string,
+): string {
+  const date = new Date(dateIso).toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+  const quoted = previousBody
+    .split("\n")
+    .map((line) => `> ${line}`)
+    .join("\n");
+  return `\n\nOn ${date}, ${authorLabel} wrote:\n${quoted}`;
+}
+
 export function generateApiKey(): { fullKey: string; prefix: string; hash: string } {
   const random = randomBytes(24).toString("base64url");
   const fullKey = `tq_live_${random}`;

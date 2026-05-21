@@ -6,10 +6,30 @@ import type {
   OutboundEmail,
   ParsedEmail,
 } from "./types";
+import { verifySvixWebhook } from "./verify-svix";
 
 function extractAddress(raw: string): string {
   const match = raw.match(/<([^>]+)>/);
   return (match?.[1] ?? raw).trim().toLowerCase();
+}
+
+function extractDisplayName(raw: string): string | undefined {
+  const match = raw.match(/^([^<]+)</);
+  if (!match) return undefined;
+  return match[1]!.trim().replace(/^["']|["']$/g, "");
+}
+
+function parseAddressList(raw: string | string[] | undefined | null): string[] {
+  if (!raw) return [];
+  const values = Array.isArray(raw) ? raw : [raw];
+  const addresses: string[] = [];
+  for (const value of values) {
+    for (const part of String(value).split(",")) {
+      const addr = extractAddress(part);
+      if (addr) addresses.push(addr);
+    }
+  }
+  return [...new Set(addresses)];
 }
 
 function webhookData(raw: InboundWebhookPayload): Record<string, unknown> {
@@ -39,11 +59,30 @@ function headerValue(
   return undefined;
 }
 
+function parseAttachments(
+  rawAttachments: unknown,
+): ParsedEmail["attachments"] {
+  const attachments: ParsedEmail["attachments"] = [];
+  for (const att of (rawAttachments ?? []) as Array<Record<string, unknown>>) {
+    const content = att.content
+      ? Buffer.from(String(att.content), "base64")
+      : Buffer.alloc(0);
+    attachments.push({
+      filename: String(att.filename ?? "attachment"),
+      contentType: String(
+        att.content_type ?? att.contentType ?? "application/octet-stream",
+      ),
+      content,
+      sizeBytes: content.length,
+    });
+  }
+  return attachments;
+}
+
 export function createResendAdapter(): EmailAdapter {
   const apiKey = process.env.RESEND_API_KEY;
   const webhookSecret = process.env.RESEND_INBOUND_WEBHOOK_SECRET;
   const resend = apiKey ? new Resend(apiKey) : null;
-  const webhookClient = new Resend("");
 
   return {
     async send(params: OutboundEmail) {
@@ -58,26 +97,45 @@ export function createResendAdapter(): EmailAdapter {
       const { data, error } = await resend.emails.send({
         from: params.from,
         to: params.to,
+        cc: params.cc?.length ? params.cc : undefined,
         subject: params.subject,
         text: params.body,
+        html: params.html,
         headers,
+        attachments: params.attachments?.map((att) => ({
+          filename: att.filename,
+          content: att.content,
+        })),
       });
 
       if (error) throw new Error(error.message);
-      const messageId = data?.id ? `<${data.id}@resend.dev>` : `<${randomUUID()}@ticqex.local>`;
-      return { messageId };
+      const resendId = data?.id;
+      const messageId = resendId
+        ? `<${resendId}@resend.dev>`
+        : `<${randomUUID()}@ticqex.local>`;
+      return { messageId, resendId };
     },
 
     parseInbound(raw: InboundWebhookPayload): ParsedEmail {
       const data = webhookData(raw);
-      const from = extractAddress(String(data.from ?? ""));
-      const toRaw = data.to;
-      const to = extractAddress(
-        Array.isArray(toRaw) ? String(toRaw[0] ?? "") : String(toRaw ?? ""),
+      const fromRaw = String(data.from ?? "");
+      const from = extractAddress(fromRaw);
+      const fromName = extractDisplayName(fromRaw);
+      const to = parseAddressList(
+        data.to as string | string[] | undefined,
+      );
+      const cc = parseAddressList(
+        (data.cc ?? data.cc_addresses) as string | string[] | undefined,
       );
       const subject = String(data.subject ?? "(no subject)");
-      const text = String(data.text ?? data.html ?? "");
+      const text = String(data.text ?? "");
+      const html = data.html ? String(data.html) : undefined;
       const headers = (data.headers ?? {}) as Record<string, string | string[]>;
+
+      const headerTo = headerValue(headers, "to");
+      const headerCc = headerValue(headers, "cc");
+      const resolvedTo = to.length ? to : parseAddressList(headerTo);
+      const resolvedCc = cc.length ? cc : parseAddressList(headerCc);
 
       const messageId = String(
         data.message_id ??
@@ -95,30 +153,19 @@ export function createResendAdapter(): EmailAdapter {
         references = referencesRaw.flatMap((r) => r.split(/\s+/)).filter(Boolean);
       }
 
-      const attachments: ParsedEmail["attachments"] = [];
-      const rawAttachments = (data.attachments ?? []) as Array<Record<string, unknown>>;
-      for (const att of rawAttachments) {
-        const content = att.content
-          ? Buffer.from(String(att.content), "base64")
-          : Buffer.alloc(0);
-        attachments.push({
-          filename: String(att.filename ?? "attachment"),
-          contentType: String(att.content_type ?? att.contentType ?? "application/octet-stream"),
-          content,
-          sizeBytes: content.length,
-        });
-      }
-
       return {
         from,
-        to,
+        fromName,
+        to: resolvedTo,
+        cc: resolvedCc,
         subject,
-        body: text,
+        body: text || (html ? htmlToPlainText(html) : ""),
+        bodyHtml: html,
         messageId,
         resendEmailId: data.email_id ? String(data.email_id) : undefined,
         inReplyTo: typeof inReplyTo === "string" ? inReplyTo : undefined,
         references,
-        attachments,
+        attachments: parseAttachments(data.attachments),
       };
     },
 
@@ -151,38 +198,34 @@ export function createResendAdapter(): EmailAdapter {
         references = referencesRaw.split(/\s+/).filter(Boolean);
       }
 
+      const fromRaw = received.from ?? "";
+      const to = parseAddressList(received.to);
+      const cc =
+        parseAddressList(headerValue(apiHeaders, "cc")) ||
+        parsed.cc;
+
       return {
         ...parsed,
-        from: extractAddress(received.from) || parsed.from,
-        to: extractAddress(received.to[0] ?? "") || parsed.to,
+        from: extractAddress(fromRaw) || parsed.from,
+        fromName: extractDisplayName(fromRaw) ?? parsed.fromName,
+        to: to.length ? to : parsed.to,
+        cc,
         subject: received.subject || parsed.subject,
         body,
+        bodyHtml: received.html ?? parsed.bodyHtml,
         messageId: received.message_id
           ? String(received.message_id)
           : parsed.messageId,
         inReplyTo,
         references,
+        attachments: received.attachments?.length
+          ? parseAttachments(received.attachments)
+          : parsed.attachments,
       };
     },
 
     verifyWebhookSignature(payload: string, headers: Headers) {
-      if (!webhookSecret) return process.env.NODE_ENV !== "production";
-
-      const id = headers.get("svix-id");
-      const timestamp = headers.get("svix-timestamp");
-      const signature = headers.get("svix-signature");
-      if (!id || !timestamp || !signature) return false;
-
-      try {
-        webhookClient.webhooks.verify({
-          payload,
-          headers: { id, timestamp, signature },
-          webhookSecret,
-        });
-        return true;
-      } catch {
-        return false;
-      }
+      return verifySvixWebhook(payload, headers, webhookSecret);
     },
   };
 }

@@ -131,10 +131,13 @@ export async function markTicketMessagesRead(ticketId: string, userId: string) {
 
   const { data: ticket } = await db
     .from("tickets")
-    .select("id")
+    .select("id, kind")
     .eq("id", ticketId)
     .maybeSingle();
   if (!ticket) throw ApiError.notFound("Ticket not found");
+  if (ticket.kind !== "conversation") {
+    return { marked: 0 };
+  }
 
   const { data: messages, error } = await db
     .from("messages")

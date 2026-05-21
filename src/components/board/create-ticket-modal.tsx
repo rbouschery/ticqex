@@ -1,6 +1,25 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api-client";
 
 export function CreateTicketModal({
@@ -21,17 +40,29 @@ export function CreateTicketModal({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      setError("Title is required");
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    const trimmedBody = body.trim();
+    const trimmedCustomer = customer.trim();
+
     try {
       await apiFetch("/api/v1/tickets", {
         method: "POST",
         body: JSON.stringify({
-          title,
-          customer: { username: customer },
-          status_id: statusId,
+          kind: "task",
+          title: trimmedTitle,
+          ...(trimmedBody ? { body: trimmedBody } : {}),
+          ...(trimmedCustomer
+            ? { customer: { username: trimmedCustomer } }
+            : {}),
+          ...(statusId ? { status_id: statusId } : {}),
           origin: "manual",
-          message: body ? { body, visibility: "public", channel: "admin" } : undefined,
         }),
       });
       onCreated();
@@ -43,78 +74,69 @@ export function CreateTicketModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900"
-      >
-        <h2 className="text-lg font-semibold">New ticket</h2>
-        <div className="mt-4 space-y-3">
-          <label className="block text-sm">
-            Title
-            <input
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>New task</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="ticket-title">Title</Label>
+            <Input
+              id="ticket-title"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
             />
-          </label>
-          <label className="block text-sm">
-            Customer
-            <input
-              required
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ticket-customer">Customer (optional)</Label>
+            <Input
+              id="ticket-customer"
               placeholder="email or username"
               value={customer}
               onChange={(e) => setCustomer(e.target.value)}
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
             />
-          </label>
-          <label className="block text-sm">
-            Status
-            <select
-              value={statusId}
-              onChange={(e) => setStatusId(e.target.value)}
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
-            >
-              {statuses.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            Initial message
-            <textarea
+          </div>
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select value={statusId} onValueChange={setStatusId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ticket-body">Description</Label>
+            <Textarea
+              id="ticket-body"
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={3}
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
             />
-          </label>
-        </div>
-        {error && (
-          <p className="mt-2 text-sm text-red-600" role="alert">
-            {error}
-          </p>
-        )}
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded px-3 py-1.5 text-sm text-zinc-600"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-          >
-            Create
-          </button>
-        </div>
-      </form>
-    </div>
+          </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <DialogFooter className="border-0 bg-transparent p-0">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading || !title.trim()}>
+              Create
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

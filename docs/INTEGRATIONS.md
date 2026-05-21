@@ -172,8 +172,8 @@ export const processInboundEmail = task({
     const parsed = emailAdapter.parseInbound(payload.raw)
     const customer = await findOrCreateCustomer(parsed.from)
     const ticket = await matchOrCreateTicket(parsed, customer)
-    await createMessage(ticket, parsed)
-    await storeAttachments(parsed.attachments, message)
+    await createInboundCustomerMessage(ticketId, parsed)
+    await storeAttachments(ticketId, message.id, parsed.attachments)
   },
 })
 ```

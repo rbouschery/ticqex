@@ -36,10 +36,15 @@ export async function POST(request: NextRequest) {
 
   const { tasks } = await import("@trigger.dev/sdk/v3");
   const idempotencyKey = inboundTriggerIdempotencyKey(payload);
-  await tasks.trigger(
+  const handle = await tasks.trigger(
     "process-inbound-email",
     { raw: payload },
     idempotencyKey ? { idempotencyKey } : undefined,
   );
-  return NextResponse.json({ accepted: true, queued: true });
+  return NextResponse.json({
+    accepted: true,
+    queued: true,
+    run_id: handle.id,
+    idempotency_key: idempotencyKey ?? null,
+  });
 }

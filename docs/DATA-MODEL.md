@@ -21,6 +21,10 @@ erDiagram
     Ticket {
         uuid id PK
         text title
+        enum kind
+        text body
+        text channel
+        text contact_address
         enum origin
         uuid customer_id FK
         uuid status_id FK
@@ -109,14 +113,20 @@ Labels on tickets.
 |--------|------|-------|
 | `id` | `uuid` PK | |
 | `title` | `text` | Required |
-| `customer_id` | `uuid` FK → customers | Required |
+| `kind` | `enum` | `task`, `conversation` (immutable) |
+| `body` | `text` | Task description only; null on conversations |
+| `channel` | `text` | Plugin id (`email` v1); null on tasks |
+| `contact_address` | `text` | Thread delivery address; required on conversations |
+| `customer_id` | `uuid` FK → customers | Optional on tasks; required on conversations |
 | `status_id` | `uuid` FK → status_types | Required; default = first status |
 | `assignee_id` | `uuid` FK → users | Nullable |
-| `origin` | `enum` | `manual`, `api`, `email` |
+| `origin` | `enum` | Ingress only: `manual`, `api`, `email` |
 | `created_at` | `timestamptz` | |
 | `updated_at` | `timestamptz` | |
 
-**Indexes:** `customer_id`, `status_id`, `assignee_id`, `created_at`, `updated_at`
+**Task tickets** use `body` only — no rows in `messages`. **Conversation tickets** use `messages` for the thread; outbound email runs when `kind = conversation` and `channel = email`.
+
+**Indexes:** `customer_id`, `status_id`, `assignee_id`, `kind`, `contact_address`, `created_at`, `updated_at`
 
 ### `ticket_tags`
 
@@ -151,7 +161,7 @@ Conversation thread. Separate from ticket title.
 - `public` — visible to customer (included in outbound email, copy-context)
 - `internal` — agent-only notes; never sent via email
 
-**First message:** When creating a ticket with an initial body, create one `messages` row (not a separate `body` column on ticket).
+**First message:** When creating a **conversation** with an initial body, create one `messages` row. **Tasks** store description in `tickets.body` instead.
 
 ### `attachments`
 
@@ -274,6 +284,7 @@ Used for fallback matching when `In-Reply-To` is missing. See [INTEGRATIONS.md](
 ```typescript
 // Reference types — not necessarily exact TS in repo
 
+type TicketKind = 'task' | 'conversation'
 type TicketOrigin = 'manual' | 'api' | 'email'
 type MessageVisibility = 'public' | 'internal'
 type MessageAuthorType = 'customer' | 'agent' | 'system'

@@ -1,0 +1,111 @@
+import { createAdminClient } from "@server/lib/supabase-admin";
+import { ApiError } from "@server/lib/errors";
+
+export type TicketKind = "task" | "conversation";
+
+export type TicketChannel = "email";
+
+export type TicketOrigin = "manual" | "api" | "email";
+
+/** Nested shapes from `tickets` list/detail select with joins. */
+export type TicketListCustomer = {
+  id: string;
+  username: string;
+};
+
+export type TicketListAssignee = {
+  id: string;
+  username: string;
+  email?: string;
+};
+
+export type TicketListStatus = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+/** Row shape for `*, customers(...), users:assignee_id(...), status_types(...)`. */
+export type TicketListRow = {
+  id: string;
+  title: string;
+  kind: TicketKind;
+  body: string | null;
+  channel: string | null;
+  contact_address: string | null;
+  customer_id: string | null;
+  status_id: string;
+  assignee_id: string | null;
+  origin: TicketOrigin;
+  created_at: string;
+  updated_at: string;
+  customers: TicketListCustomer | null;
+  users: TicketListAssignee | null;
+  status_types: TicketListStatus | null;
+};
+
+export const TICKET_LIST_SELECT =
+  "*, customers(id, username), users:assignee_id(id, username), status_types(id, name, color)";
+
+/** Row shape for board lane ticket select (subset of list fields). */
+export type BoardTicketCustomer = {
+  username: string;
+};
+
+export type BoardTicketAssignee = {
+  username: string;
+};
+
+export type BoardTicketRow = {
+  id: string;
+  title: string;
+  kind: TicketKind;
+  channel: string | null;
+  body: string | null;
+  updated_at: string;
+  customers: BoardTicketCustomer | null;
+  users: BoardTicketAssignee | null;
+};
+
+export const BOARD_TICKET_SELECT =
+  "id, title, kind, channel, body, updated_at, customers(username), users:assignee_id(username)";
+
+export type TicketRow = {
+  id: string;
+  kind: TicketKind;
+  body: string | null;
+  channel: string | null;
+  contact_address: string | null;
+  customer_id: string | null;
+  title: string;
+  origin?: string;
+};
+
+export function isTaskTicket(ticket: Pick<TicketRow, "kind">): boolean {
+  return ticket.kind === "task";
+}
+
+export function isConversationTicket(
+  ticket: Pick<TicketRow, "kind">,
+): boolean {
+  return ticket.kind === "conversation";
+}
+
+export function canSendEmail(
+  ticket: Pick<TicketRow, "kind" | "channel">,
+): boolean {
+  return (
+    isConversationTicket(ticket) && ticket.channel === "email"
+  );
+}
+
+export async function loadTicketRow(id: string): Promise<TicketRow> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("tickets")
+    .select("id, kind, body, channel, contact_address, customer_id, title, origin")
+    .eq("id", id)
+    .single();
+  if (error || !data) throw ApiError.notFound("Ticket not found");
+  return data as TicketRow;
+}

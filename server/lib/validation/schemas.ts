@@ -1,33 +1,63 @@
 import { z } from "zod";
 import { ApiError } from "@server/lib/errors";
 
+const emailAddressSchema = z.string().email();
+
+export const emailComposeOptionsSchema = z.object({
+  cc: z.array(emailAddressSchema).optional(),
+  subject: z.string().optional(),
+  reply_all: z.boolean().optional(),
+  include_quote: z.boolean().optional(),
+  attachment_upload_ids: z.array(z.string().uuid()).optional(),
+});
+
 export const messageInputSchema = z.object({
   body: z.string().min(1),
   visibility: z.enum(["public", "internal"]).default("public"),
   channel: z.enum(["email", "api", "admin"]).optional(),
+  email: emailComposeOptionsSchema.optional(),
+});
+
+const ticketBaseSchema = z.object({
+  title: z.string().trim().min(1),
+  status_id: z.string().uuid().optional(),
+  assignee_id: z.string().uuid().nullable().optional(),
+  origin: z.enum(["manual", "api", "email"]).optional(),
+  tags: z.array(z.string()).optional(),
+  custom_fields: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const createTaskTicketSchema = ticketBaseSchema.extend({
+  kind: z.literal("task"),
+  body: z.string().optional(),
+  customer: z
+    .object({ username: z.string() })
+    .optional()
+    .transform((c) => {
+      const username = c?.username?.trim();
+      return username ? { username } : undefined;
+    }),
+});
+
+/** Conversations are created by inbound email only, not via API. */
+export const createTicketSchema = createTaskTicketSchema;
+
+export const updateTicketSchema = z.object({
+  title: z.string().min(1).optional(),
+  body: z.string().nullable().optional(),
+  status_id: z.string().uuid().optional(),
+  assignee_id: z.string().uuid().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  custom_fields: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const toggleMessageReadSchema = z.object({
   read: z.boolean().optional(),
 });
 
-export const createTicketSchema = z.object({
+export const createEmailSnippetSchema = z.object({
   title: z.string().min(1),
-  customer: z.object({ username: z.string().min(1) }),
-  status_id: z.string().uuid().optional(),
-  assignee_id: z.string().uuid().nullable().optional(),
-  origin: z.enum(["manual", "api", "email"]).optional(),
-  tags: z.array(z.string()).optional(),
-  message: messageInputSchema.optional(),
-  custom_fields: z.record(z.string(), z.unknown()).optional(),
-});
-
-export const updateTicketSchema = z.object({
-  title: z.string().min(1).optional(),
-  status_id: z.string().uuid().optional(),
-  assignee_id: z.string().uuid().nullable().optional(),
-  tags: z.array(z.string()).optional(),
-  custom_fields: z.record(z.string(), z.unknown()).optional(),
+  body: z.string().min(1),
 });
 
 export const createCustomerSchema = z.object({
@@ -88,6 +118,7 @@ export const patchSettingsSchema = z.object({
   show_body_on_ticket: z.boolean().optional(),
   visible_ticket_field_ids: z.array(z.string().uuid()).optional(),
   visible_customer_field_ids: z.array(z.string().uuid()).optional(),
+  email_signature: z.string().optional(),
 });
 
 export const createApiKeySchema = z.object({
