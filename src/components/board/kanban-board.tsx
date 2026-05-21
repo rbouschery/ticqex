@@ -28,18 +28,28 @@ export function KanbanBoard() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  const loadBoard = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const loadBoard = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const data = await apiFetch<{ lanes: BoardLane[] }>("/api/v1/board");
       setLanes(data.lanes);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load board");
+      if (!options?.silent) {
+        setError(e instanceof Error ? e.message : "Failed to load board");
+      }
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, []);
+
+  const refreshBoard = useCallback(() => {
+    void loadBoard({ silent: true });
+  }, [loadBoard]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount
@@ -90,7 +100,18 @@ export function KanbanBoard() {
   }
 
   if (loading) {
-    return <p className="p-8 text-center text-zinc-500">Loading board…</p>;
+    return (
+      <>
+        <p className="p-8 text-center text-zinc-500">Loading board…</p>
+        {selectedId && (
+          <TicketModal
+            ticketId={selectedId}
+            onClose={() => setSelectedId(null)}
+            onBoardChange={refreshBoard}
+          />
+        )}
+      </>
+    );
   }
 
   if (error) {
@@ -146,7 +167,7 @@ export function KanbanBoard() {
         <TicketModal
           ticketId={selectedId}
           onClose={() => setSelectedId(null)}
-          onUpdated={loadBoard}
+          onBoardChange={refreshBoard}
         />
       )}
 

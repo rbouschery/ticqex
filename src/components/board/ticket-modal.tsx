@@ -8,11 +8,11 @@ type StaffUser = { id: string; username: string };
 export function TicketModal({
   ticketId,
   onClose,
-  onUpdated,
+  onBoardChange,
 }: {
   ticketId: string;
   onClose: () => void;
-  onUpdated: () => void;
+  onBoardChange: () => void;
 }) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [users, setUsers] = useState<StaffUser[]>([]);
@@ -27,6 +27,7 @@ export function TicketModal({
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [t, staff] = await Promise.all([
         apiFetch<TicketDetail>(`/api/v1/tickets/${ticketId}`),
@@ -49,13 +50,13 @@ export function TicketModal({
             }
           : prev,
       );
-      onUpdated();
+      onBoardChange();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load ticket");
     } finally {
       setLoading(false);
     }
-  }, [ticketId, onUpdated]);
+  }, [ticketId, onBoardChange]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load ticket on open
@@ -80,7 +81,6 @@ export function TicketModal({
         }),
       });
       await load();
-      onUpdated();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -104,7 +104,6 @@ export function TicketModal({
       });
       setReply("");
       await load();
-      onUpdated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reply failed");
     } finally {
@@ -134,7 +133,7 @@ export function TicketModal({
             }
           : prev,
       );
-      onUpdated();
+      onBoardChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update read state");
     }
