@@ -182,6 +182,19 @@ Inbound receiving (MX/domain) must be enabled in Resend separately from the webh
 
 `pnpm dev:all` blocks on interactive `trigger login` until the CLI is authorized on that VM. Prefer the `TRIGGER_ACCESS_TOKEN` config trick above in cloud workspaces.
 
+`pnpm trigger:dev` loads `.env.local` and allows up to 10 concurrent local runs. Inbound/outbound triggers use **idempotency keys** (Resend `email_id` / message UUID) so webhook retries do not spawn duplicate runs.
+
+**If runs stall in `DEQUEUED` / `QUEUED` and tickets or emails never appear:**
+
+```bash
+pnpm trigger:clean    # cancel stuck dev runs + clear .trigger build cache
+pnpm dev:all          # predev:all kills stale next/trigger processes first
+```
+
+**Root cause:** Only one `pnpm dev:all` may run at a time. A second instance hits the Next.js dev lock; `concurrently --kill-others-on-fail` then SIGTERM-kills the Trigger worker while the API keeps queuing runs that never execute. Inbound/outbound handlers require Trigger — there is no inline fallback.
+
+Stuck runs block dev concurrency. Also check Trigger dashboard for runs stuck in `EXECUTING`. After frequent code edits, worker version churn (e.g. `20260521.6` → `.7`) can leave old runs pending — cancel them and restart.
+
 ### Key gotchas
 
 - **Docker in cloud VM**: Requires `fuse-overlayfs` storage driver and `iptables-legacy`. `/etc/docker/daemon.json` should include `{"storage-driver": "fuse-overlayfs"}`.
@@ -195,4 +208,4 @@ Inbound receiving (MX/domain) must be enabled in Resend separately from the webh
 
 ### Standard commands
 
-`pnpm lint`, `pnpm build`, `pnpm dev`, `pnpm dev:all`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:env`, `pnpm db:seed-admin`, `pnpm trigger:login`, `pnpm trigger:create`, `pnpm trigger:env`, `pnpm trigger:dev`.
+`pnpm lint`, `pnpm build`, `pnpm dev`, `pnpm dev:all`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:env`, `pnpm db:seed-admin`, `pnpm trigger:login`, `pnpm trigger:create`, `pnpm trigger:env`, `pnpm trigger:dev`, `pnpm trigger:clean`, `pnpm trigger:smoke`.

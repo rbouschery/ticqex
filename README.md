@@ -83,7 +83,7 @@ Open [http://localhost:3000](http://localhost:3000), sign in with `SEED_ADMIN_*`
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `.env.example` defaults | `pnpm db:seed-admin` |
 | `RESEND_*`, `SUPPORT_*` | Manual | Phase 3 email (optional locally) |
 
-Without `TRIGGER_SECRET_KEY`, the app still runs; inbound/outbound email handlers fall back to inline processing where implemented.
+Without `TRIGGER_SECRET_KEY`, inbound webhooks return 503 and outbound replies throw — email processing requires Trigger.dev.
 
 ### Cloud Supabase
 
