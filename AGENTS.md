@@ -122,6 +122,8 @@ curl -s https://readbetter.rbouschery.de/api/health
 
 Expect: `{"status":"ok","checks":{"app":"ok","database":"ok"}}`
 
+**Browser testing:** Open the app at `http://localhost:3000`, not `http://127.0.0.1:3000`. Next.js dev mode treats these as different origins; client JS and HMR can fail on `127.0.0.1` unless `allowedDevOrigins` is configured (already set in `next.config.ts`).
+
 Public URL returning **1033** or **530** → named tunnel not connected. **502** → tunnel up but nothing on `:3000`.
 
 ### Cloudflare tunnel

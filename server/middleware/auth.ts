@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@server/lib/supabase-admin";
 import { ApiError } from "@server/lib/errors";
@@ -84,17 +85,57 @@ async function authViaJwt(token: string): Promise<AuthContext | null> {
   };
 }
 
+async function authViaCookies(request: NextRequest): Promise<AuthContext | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return null;
+
+  const supabase = createServerClient(url, anonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll() {
+        // API routes are read-only for session refresh
+      },
+    },
+  });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const db = createAdminClient();
+  const { data: staff } = await db
+    .from("users")
+    .select("id, role")
+    .eq("id", user.id)
+    .single();
+
+  if (!staff) return null;
+
+  return {
+    type: "staff",
+    userId: staff.id,
+    role: staff.role as "admin" | "agent",
+  };
+}
+
 export async function authenticateRequest(
   request: NextRequest,
 ): Promise<AuthContext> {
   const token = getBearerToken(request);
-  if (!token) throw ApiError.unauthorized();
+  if (token) {
+    const viaKey = await authViaApiKey(token);
+    if (viaKey) return viaKey;
 
-  const viaKey = await authViaApiKey(token);
-  if (viaKey) return viaKey;
+    const viaJwt = await authViaJwt(token);
+    if (viaJwt) return viaJwt;
+  }
 
-  const viaJwt = await authViaJwt(token);
-  if (viaJwt) return viaJwt;
+  const viaCookies = await authViaCookies(request);
+  if (viaCookies) return viaCookies;
 
   throw ApiError.unauthorized();
 }
