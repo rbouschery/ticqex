@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:all": "concurrently --kill-others-on-fail -n next,trigger -c blue,magenta \"pnpm dev\" \"pnpm trigger:dev\"",
+    "predev:all": "tsx scripts/dev-preclean.ts && tsx --env-file=.env.local scripts/cancel-stuck-trigger-runs.ts",
+    "dev:all": "concurrently --kill-others-on-fail -n next,trigger,watchdog -c blue,magenta,yellow \"pnpm dev\" \"pnpm trigger:dev\" \"pnpm trigger:watchdog\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -12,13 +13,18 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:env": "tsx scripts/sync-supabase-env.ts",
+    "env:sync": "pnpm db:env && tsx scripts/sync-cloud-env.ts && pnpm trigger:env",
+    "env:verify": "tsx --env-file=.env.local scripts/verify-env.ts",
     "db:seed-admin": "tsx --env-file=.env.local scripts/seed.ts",
     "supabase": "supabase",
     "trigger:login": "trigger login",
     "trigger:init": "trigger init --skip-package-install",
     "trigger:create": "tsx scripts/create-trigger-project.ts",
     "trigger:env": "tsx scripts/sync-trigger-env.ts",
-    "trigger:dev": "trigger dev"
+    "trigger:dev": "trigger dev --env-file .env.local --max-concurrent-runs 10",
+    "trigger:clean": "rm -rf .trigger && tsx --env-file=.env.local scripts/cancel-stuck-trigger-runs.ts",
+    "trigger:smoke": "tsx --env-file=.env.local scripts/trigger-smoke-test.ts",
+    "trigger:watchdog": "tsx --env-file=.env.local scripts/trigger-stuck-watchdog.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

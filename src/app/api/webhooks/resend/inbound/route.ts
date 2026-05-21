@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resendAdapter } from "@server/adapters/email/resend";
-import { processInboundEmail } from "@server/services/email-inbound";
+import { inboundTriggerIdempotencyKey } from "@server/adapters/email/trigger-keys";
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
@@ -22,13 +22,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (process.env.TRIGGER_SECRET_KEY) {
-    const { tasks } = await import("@trigger.dev/sdk/v3");
-    await tasks.trigger("process-inbound-email", { raw: payload });
-    return NextResponse.json({ accepted: true, queued: true });
+  if (!process.env.TRIGGER_SECRET_KEY) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "service_unavailable",
+          message: "Trigger.dev is not configured (TRIGGER_SECRET_KEY missing)",
+        },
+      },
+      { status: 503 },
+    );
   }
 
-  const parsed = resendAdapter.parseInbound(payload);
-  const result = await processInboundEmail(parsed);
-  return NextResponse.json({ accepted: true, ...result });
+  const { tasks } = await import("@trigger.dev/sdk/v3");
+  const idempotencyKey = inboundTriggerIdempotencyKey(payload);
+  await tasks.trigger(
+    "process-inbound-email",
+    { raw: payload },
+    idempotencyKey ? { idempotencyKey } : undefined,
+  );
+  return NextResponse.json({ accepted: true, queued: true });
 }

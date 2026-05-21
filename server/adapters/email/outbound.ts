@@ -1,5 +1,6 @@
 import { createAdminClient } from "@server/lib/supabase-admin";
 import { resendAdapter } from "./resend";
+import { outboundTriggerIdempotencyKey } from "./trigger-keys";
 
 const supportEmail = () =>
   process.env.SUPPORT_EMAIL ?? "support@ticqex.local";
@@ -15,6 +16,7 @@ export async function sendOutboundEmailForMessage(messageId: string) {
     .eq("id", messageId)
     .single();
   if (!message || message.visibility !== "public") return;
+  if (message.email_message_id) return;
 
   const { data: ticket } = await db
     .from("tickets")
@@ -60,10 +62,14 @@ export async function sendOutboundEmailForMessage(messageId: string) {
 }
 
 export async function enqueueOutboundEmail(messageId: string) {
-  if (process.env.TRIGGER_SECRET_KEY) {
-    const { tasks } = await import("@trigger.dev/sdk/v3");
-    await tasks.trigger("send-outbound-email", { messageId });
-    return;
+  if (!process.env.TRIGGER_SECRET_KEY) {
+    throw new Error("TRIGGER_SECRET_KEY is required to send outbound email");
   }
-  await sendOutboundEmailForMessage(messageId);
+
+  const { tasks } = await import("@trigger.dev/sdk/v3");
+  await tasks.trigger(
+    "send-outbound-email",
+    { messageId },
+    { idempotencyKey: outboundTriggerIdempotencyKey(messageId) },
+  );
 }

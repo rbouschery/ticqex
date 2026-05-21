@@ -6,6 +6,34 @@ import { getDefaultStatusId } from "@server/services/statuses";
 import { createMessage } from "@server/services/tickets";
 import type { ParsedEmail } from "@server/adapters/email/types";
 
+function isSyntheticMessageId(messageId: string) {
+  return messageId.endsWith("@inbound>");
+}
+
+async function findExistingInboundMessage(parsed: ParsedEmail) {
+  const db = createAdminClient();
+
+  if (parsed.resendEmailId) {
+    const { data } = await db
+      .from("messages")
+      .select("id, ticket_id")
+      .eq("resend_inbound_id", parsed.resendEmailId)
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  if (parsed.messageId && !isSyntheticMessageId(parsed.messageId)) {
+    const { data } = await db
+      .from("messages")
+      .select("id, ticket_id")
+      .eq("email_message_id", parsed.messageId)
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  return null;
+}
+
 async function findTicketByMessageHeaders(parsed: ParsedEmail) {
   const db = createAdminClient();
   const ids = [parsed.inReplyTo, ...(parsed.references ?? [])].filter(
@@ -84,6 +112,17 @@ async function storeAttachments(
 
 export async function processInboundEmail(parsed: ParsedEmail) {
   const db = createAdminClient();
+
+  const existing = await findExistingInboundMessage(parsed);
+  if (existing) {
+    return {
+      ticketId: existing.ticket_id,
+      messageId: existing.id,
+      isNew: false,
+      duplicate: true,
+    };
+  }
+
   const customer = await findOrCreateCustomer(parsed.from);
 
   let ticketId = await findTicketByMessageHeaders(parsed);
@@ -127,7 +166,10 @@ export async function processInboundEmail(parsed: ParsedEmail) {
 
   await db
     .from("messages")
-    .update({ email_message_id: parsed.messageId })
+    .update({
+      email_message_id: parsed.messageId,
+      resend_inbound_id: parsed.resendEmailId ?? null,
+    })
     .eq("id", message.id);
 
   await storeAttachments(ticketId, message.id, parsed.attachments);

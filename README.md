@@ -83,7 +83,7 @@ Open [http://localhost:3000](http://localhost:3000), sign in with `SEED_ADMIN_*`
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `.env.example` defaults | `pnpm db:seed-admin` |
 | `RESEND_*`, `SUPPORT_*` | Manual | Phase 3 email (optional locally) |
 
-Without `TRIGGER_SECRET_KEY`, the app still runs; inbound/outbound email handlers fall back to inline processing where implemented.
+Without `TRIGGER_SECRET_KEY`, inbound webhooks return 503 and outbound replies throw — email processing requires Trigger.dev.
 
 ### Cloud Supabase
 
@@ -97,7 +97,9 @@ Without `TRIGGER_SECRET_KEY`, the app still runs; inbound/outbound email handler
 | Command | Description |
 |---------|-------------|
 | `pnpm dev` | Next.js only |
-| `pnpm dev:all` | Next.js + Trigger.dev |
+| `pnpm dev:all` | Next.js + Trigger.dev + watchdog |
+| `pnpm env:sync` | Supabase + harness secrets + Trigger keys → `.env.local` |
+| `pnpm env:verify` | Check required env vars are set |
 | `pnpm db:start` / `db:stop` / `db:reset` | Local Supabase |
 | `pnpm db:env` | Sync Supabase keys → `.env.local` |
 | `pnpm db:seed-admin` | Create local admin user |
@@ -105,6 +107,8 @@ Without `TRIGGER_SECRET_KEY`, the app still runs; inbound/outbound email handler
 | `pnpm trigger:create` | Create/link cloud project |
 | `pnpm trigger:env` | Sync Trigger.dev keys → `.env.local` |
 | `pnpm trigger:dev` | Trigger.dev dev worker |
+| `pnpm trigger:clean` | Cancel stuck runs + clear `.trigger` cache |
+| `pnpm trigger:smoke` | Inbound Trigger task health check |
 
 ## Project layout
 
