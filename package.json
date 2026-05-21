@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "predev:all": "tsx scripts/dev-preclean.ts && tsx --env-file=.env.local scripts/cancel-stuck-trigger-runs.ts",
-    "dev:all": "concurrently --kill-others-on-fail -n next,trigger -c blue,magenta \"pnpm dev\" \"pnpm trigger:dev\"",
+    "dev:all": "concurrently --kill-others-on-fail -n next,trigger,watchdog -c blue,magenta,yellow \"pnpm dev\" \"pnpm trigger:dev\" \"pnpm trigger:watchdog\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -21,7 +21,8 @@
     "trigger:env": "tsx scripts/sync-trigger-env.ts",
     "trigger:dev": "trigger dev --env-file .env.local --max-concurrent-runs 10",
     "trigger:clean": "rm -rf .trigger && tsx --env-file=.env.local scripts/cancel-stuck-trigger-runs.ts",
-    "trigger:smoke": "tsx --env-file=.env.local scripts/trigger-smoke-test.ts"
+    "trigger:smoke": "tsx --env-file=.env.local scripts/trigger-smoke-test.ts",
+    "trigger:watchdog": "tsx --env-file=.env.local scripts/trigger-stuck-watchdog.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

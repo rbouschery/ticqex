@@ -36,7 +36,7 @@ function killDevProcesses() {
 
   try {
     const matches = execSync(
-      "pgrep -f 'concurrently.*pnpm dev|trigger.dev/dist/esm/index.js dev|next/dist/bin/next dev|devWatchdog.js'",
+      "pgrep -f 'concurrently.*pnpm dev|trigger.dev/dist/esm/index.js dev|next/dist/bin/next dev|devWatchdog.js|trigger-stuck-watchdog'",
       { encoding: "utf8" },
     ).trim();
     for (const pid of matches.split("\n").filter(Boolean)) {

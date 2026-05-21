@@ -189,9 +189,12 @@ Inbound receiving (MX/domain) must be enabled in Resend separately from the webh
 ```bash
 pnpm trigger:clean    # cancel stuck dev runs + clear .trigger build cache
 pnpm dev:all          # predev:all kills stale next/trigger processes first
+pnpm trigger:smoke    # should return ok:true within ~10s
 ```
 
 **Root cause:** Only one `pnpm dev:all` may run at a time. A second instance hits the Next.js dev lock; `concurrently --kill-others-on-fail` then SIGTERM-kills the Trigger worker while the API keeps queuing runs that never execute. Inbound/outbound handlers require Trigger — there is no inline fallback.
+
+`pnpm dev:all` now also runs `trigger:watchdog`, which every 15s cancels email task runs stuck in `DEQUEUED`/`QUEUED` for 45s+ and re-triggers them automatically.
 
 Stuck runs block dev concurrency. Also check Trigger dashboard for runs stuck in `EXECUTING`. After frequent code edits, worker version churn (e.g. `20260521.6` → `.7`) can leave old runs pending — cancel them and restart.
 
