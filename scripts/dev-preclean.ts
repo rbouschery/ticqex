@@ -26,7 +26,7 @@ function pidOnPort(port: number): number | null {
 }
 
 function killDevProcesses() {
-  for (const port of [3000, 3001]) {
+  for (const port of [3000, 3001, 3002]) {
     const pid = pidOnPort(port);
     if (pid) {
       console.log(`Stopping process ${pid} on port ${port}`);
@@ -36,7 +36,7 @@ function killDevProcesses() {
 
   try {
     const matches = execSync(
-      "pgrep -f 'concurrently.*pnpm dev|trigger.dev/dist/esm/index.js dev|next/dist/bin/next dev|devWatchdog.js|trigger-stuck-watchdog'",
+      "pgrep -f 'concurrently.*pnpm dev|trigger.dev/dist/esm/index.js dev|next/dist/bin/next dev|next-server|devWatchdog.js|trigger-stuck-watchdog'",
       { encoding: "utf8" },
     ).trim();
     for (const pid of matches.split("\n").filter(Boolean)) {
