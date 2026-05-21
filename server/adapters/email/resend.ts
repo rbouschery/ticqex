@@ -115,6 +115,7 @@ export function createResendAdapter(): EmailAdapter {
         subject,
         body: text,
         messageId,
+        resendEmailId: data.email_id ? String(data.email_id) : undefined,
         inReplyTo: typeof inReplyTo === "string" ? inReplyTo : undefined,
         references,
         attachments,

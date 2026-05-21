@@ -27,6 +27,8 @@ export interface ParsedEmail {
   subject: string;
   body: string;
   messageId: string;
+  /** Resend receiving email id from email.received webhooks (stable across retries). */
+  resendEmailId?: string;
   inReplyTo?: string;
   references?: string[];
   attachments: ParsedAttachment[];
