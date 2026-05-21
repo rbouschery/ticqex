@@ -24,7 +24,7 @@ Further integration detail: [docs/INTEGRATIONS.md](./docs/INTEGRATIONS.md).
 |---------|---------|------|-------|
 | Next.js dev server | `pnpm dev` | 3000 | App UI + API routes; loads `.env.local` |
 | Trigger.dev dev | `pnpm trigger:dev` | — | Optional local worker; see [Trigger.dev](#triggerdev) |
-| Next + Trigger | `pnpm dev:all` | 3000 | Both processes; requires Trigger CLI auth on the VM |
+| Next + Trigger + watchdog | `pnpm dev:all` | 3000 | **Use this.** One instance only. |
 | Supabase local | `pnpm db:start` | 54321 (API), 54322 (DB), 54323 (Studio) | Requires Docker |
 | Cloudflare tunnel | `cloudflared tunnel run --token "$CLOUDFLARE_TUNNEL_TOKEN"` | — | Proxies public hostname → `localhost:3000` |
 
@@ -52,26 +52,26 @@ Typically provided:
 | `NEXT_PUBLIC_APP_URL` | Yes | Set to `https://readbetter.rbouschery.de` when tunnel is up |
 | Supabase JWT keys | **No** | Written by `pnpm db:env` after `pnpm db:start` |
 
-Next.js and most scripts expect **`.env.local`** (gitignored). After harness vars are available, merge them before starting the app:
+Next.js and scripts expect **`.env.local`** (gitignored). Sync everything in one step after Supabase is up:
 
 ```bash
 cd /workspace
-pnpm db:env   # creates/updates .env.local with Supabase keys
+pnpm db:start          # if not already running
+pnpm env:sync          # db:env + harness merge + trigger CLI config + trigger:env
+pnpm env:verify        # optional sanity check
+```
 
-node -e "
-const fs = require('fs');
-function setLine(c, k, v) {
-  const line = k + '=' + v;
-  const p = new RegExp('^' + k + '=.*$', 'm');
-  return p.test(c) ? c.replace(p, line) : c.replace(/\n?$/, '') + '\n' + line + '\n';
-}
-let c = fs.readFileSync('.env.local', 'utf8');
-for (const k of ['RESEND_API_KEY','RESEND_INBOUND_WEBHOOK_SECRET','SUPPORT_EMAIL','SUPPORT_FROM_NAME','TRIGGER_PROJECT_REF','TRIGGER_SECRET_KEY','NEXT_PUBLIC_APP_URL']) {
-  if (process.env[k]) c = setLine(c, k, process.env[k]);
-}
-fs.writeFileSync('.env.local', c.endsWith('\n') ? c : c + '\n');
-console.log('Merged harness keys into .env.local');
-"
+`pnpm env:sync` runs:
+1. `pnpm db:env` — Supabase JWT keys into `.env.local`
+2. `scripts/sync-cloud-env.ts` — merges harness secrets + writes `~/.config/trigger/config.json` from `TRIGGER_ACCESS_TOKEN`
+3. `pnpm trigger:env` — refreshes `TRIGGER_SECRET_KEY` in `.env.local`
+
+Harness keys merged when present in `process.env`: `RESEND_API_KEY`, `RESEND_INBOUND_WEBHOOK_SECRET`, `SUPPORT_EMAIL`, `SUPPORT_FROM_NAME`, `TRIGGER_PROJECT_REF`, `TRIGGER_SECRET_KEY`, `NEXT_PUBLIC_APP_URL`.
+
+Manual merge (if not using `pnpm env:sync`):
+
+```bash
+tsx scripts/sync-cloud-env.ts
 ```
 
 If `RESEND_INBOUND_WEBHOOK_SECRET` is wrong or missing, copy the **signing secret** from [Resend → Webhooks](https://resend.com/webhooks) (webhook details page) or fetch it via `resend.webhooks.get(id)` using `RESEND_API_KEY`. If you recreate the webhook, update the harness secret to match.
@@ -93,27 +93,18 @@ pnpm db:start
 pnpm db:env
 pnpm db:seed-admin
 
-# 3. Merge harness into .env.local (script above) + pnpm trigger:env
+# 3. Environment
+pnpm env:sync
+pnpm db:seed-admin
 
-# 4. Trigger CLI (non-interactive — uses TRIGGER_ACCESS_TOKEN from harness)
-mkdir -p ~/.config/trigger
-node -e "
-const fs = require('fs');
-const p = process.env.HOME + '/.config/trigger/config.json';
-fs.writeFileSync(p, JSON.stringify({
-  profiles: { default: { accessToken: process.env.TRIGGER_ACCESS_TOKEN, apiUrl: 'https://api.trigger.dev' } },
-  currentProfile: 'default'
-}, null, 2));
-console.log('Trigger CLI config written');
-"
-pnpm trigger:env
+# 4. App (single instance — predev:all cleans stale processes + stuck Trigger runs)
+pnpm dev:all
 
-# 5. App
-pnpm dev:all       # Next.js (3000) + Trigger.dev dev worker
-
-# 6. Named tunnel (NOT quick tunnel) — separate terminal or background
+# 5. Named tunnel (NOT quick tunnel) — separate terminal or background
 cloudflared tunnel run --token "$CLOUDFLARE_TUNNEL_TOKEN"
 ```
+
+Do **not** start a second `pnpm dev:all`. A stale Next.js lock causes `concurrently --kill-others-on-fail` to kill the Trigger worker while webhooks keep queuing runs that never execute.
 
 Install `cloudflared` if missing:
 
@@ -171,32 +162,54 @@ Use the **raw request body** (string) when verifying — re-stringifying parsed 
 
 Inbound receiving (MX/domain) must be enabled in Resend separately from the webhook.
 
+### Email architecture (Trigger-only)
+
+All email processing goes through Trigger.dev — **no inline fallback** in API routes.
+
+| Direction | Entry | Trigger task | Notes |
+|-----------|-------|--------------|-------|
+| Inbound | `POST /api/webhooks/resend/inbound` | `process-inbound-email` | Svix verify → queue; body fetched in task via `resolveInbound()` |
+| Outbound | `POST /api/v1/tickets/:id/messages` (public) | `send-outbound-email` | After DB insert; Resend send in task |
+
+Idempotency keys: `inbound:resend:{email_id}`, `outbound:message:{messageId}`. DB dedupe: `messages.resend_inbound_id`, `messages.email_message_id`.
+
+Missing `TRIGGER_SECRET_KEY` → inbound returns **503**, outbound throws.
+
 ### Trigger.dev
 
-| Mode | When |
+| Command | Purpose |
+|---------|---------|
+| `pnpm dev:all` | Next.js + `trigger:dev` + stuck-run watchdog |
+| `pnpm env:sync` | Supabase + harness + Trigger CLI + dev secret key |
+| `pnpm trigger:clean` | Cancel stuck runs + clear `.trigger` cache |
+| `pnpm trigger:smoke` | End-to-end inbound task health check |
+| `pnpm trigger:watchdog` | Auto-recovery (also runs inside `dev:all`) |
+
+| Auth | When |
 |------|------|
-| `TRIGGER_SECRET_KEY` in `.env.local` / harness | Webhooks and outbound can queue jobs without `trigger:dev` |
-| `TRIGGER_ACCESS_TOKEN` + `~/.config/trigger/config.json` | Non-interactive CLI auth for `pnpm dev:all` / `pnpm trigger:dev` |
-| `pnpm trigger:login` | Interactive fallback when `TRIGGER_ACCESS_TOKEN` is not available |
-| `pnpm trigger:create` | First-time project bootstrap on a new Trigger account |
+| `TRIGGER_SECRET_KEY` in `.env.local` | App queues tasks via SDK |
+| `TRIGGER_ACCESS_TOKEN` → `~/.config/trigger/config.json` | Non-interactive `trigger dev` (via `pnpm env:sync`) |
+| `pnpm trigger:login` | Interactive fallback |
 
-`pnpm dev:all` blocks on interactive `trigger login` until the CLI is authorized on that VM. Prefer the `TRIGGER_ACCESS_TOKEN` config trick above in cloud workspaces.
+`pnpm trigger:dev` loads `.env.local`, `--max-concurrent-runs 10`.
 
-`pnpm trigger:dev` loads `.env.local` and allows up to 10 concurrent local runs. Inbound/outbound triggers use **idempotency keys** (Resend `email_id` / message UUID) so webhook retries do not spawn duplicate runs.
-
-**If runs stall in `DEQUEUED` / `QUEUED` and tickets or emails never appear:**
+**Stuck runs (`DEQUEUED` / `QUEUED`) — inbound or outbound not appearing:**
 
 ```bash
-pnpm trigger:clean    # cancel stuck dev runs + clear .trigger build cache
-pnpm dev:all          # predev:all kills stale next/trigger processes first
-pnpm trigger:smoke    # should return ok:true within ~10s
+pnpm trigger:clean
+pnpm dev:all
+pnpm trigger:smoke     # inbound ok:true within ~10s
+pnpm env:verify
 ```
 
-**Root cause:** Only one `pnpm dev:all` may run at a time. A second instance hits the Next.js dev lock; `concurrently --kill-others-on-fail` then SIGTERM-kills the Trigger worker while the API keeps queuing runs that never execute. Inbound/outbound handlers require Trigger — there is no inline fallback.
+**Root causes:**
+- Only **one** `pnpm dev:all` at a time (see startup sequence).
+- Local Trigger worker occasionally misses dispatch; runs orphan in `DEQUEUED`.
+- `predev:all` kills stale processes and cancels stuck runs on startup.
 
-`pnpm dev:all` now also runs `trigger:watchdog`, which every 15s cancels email task runs stuck in `DEQUEUED`/`QUEUED` for 45s+ and re-triggers them automatically.
+**Watchdog** (`scripts/trigger-stuck-watchdog.ts`, runs in `dev:all`): every 15s, finds email tasks stuck 20s+ in `DEQUEUED`/`QUEUED`, **re-triggers first** (uses `runs.retrieve` for payload — `runs.list` omits it), then cancels the stuck run best-effort. DB dedupe prevents double sends on outbound recovery.
 
-Stuck runs block dev concurrency. Also check Trigger dashboard for runs stuck in `EXECUTING`. After frequent code edits, worker version churn (e.g. `20260521.6` → `.7`) can leave old runs pending — cancel them and restart.
+After code edits, worker version churn (e.g. `20260521.10` → `.11`) can leave old runs pending — `pnpm trigger:clean` and restart.
 
 ### Key gotchas
 
@@ -211,4 +224,4 @@ Stuck runs block dev concurrency. Also check Trigger dashboard for runs stuck in
 
 ### Standard commands
 
-`pnpm lint`, `pnpm build`, `pnpm dev`, `pnpm dev:all`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:env`, `pnpm db:seed-admin`, `pnpm trigger:login`, `pnpm trigger:create`, `pnpm trigger:env`, `pnpm trigger:dev`, `pnpm trigger:clean`, `pnpm trigger:smoke`.
+`pnpm lint`, `pnpm build`, `pnpm dev`, `pnpm dev:all`, `pnpm env:sync`, `pnpm env:verify`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:env`, `pnpm db:seed-admin`, `pnpm trigger:login`, `pnpm trigger:create`, `pnpm trigger:env`, `pnpm trigger:dev`, `pnpm trigger:clean`, `pnpm trigger:smoke`, `pnpm trigger:watchdog`.

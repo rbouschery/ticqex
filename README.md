@@ -97,7 +97,9 @@ Without `TRIGGER_SECRET_KEY`, inbound webhooks return 503 and outbound replies t
 | Command | Description |
 |---------|-------------|
 | `pnpm dev` | Next.js only |
-| `pnpm dev:all` | Next.js + Trigger.dev |
+| `pnpm dev:all` | Next.js + Trigger.dev + watchdog |
+| `pnpm env:sync` | Supabase + harness secrets + Trigger keys → `.env.local` |
+| `pnpm env:verify` | Check required env vars are set |
 | `pnpm db:start` / `db:stop` / `db:reset` | Local Supabase |
 | `pnpm db:env` | Sync Supabase keys → `.env.local` |
 | `pnpm db:seed-admin` | Create local admin user |
@@ -105,6 +107,8 @@ Without `TRIGGER_SECRET_KEY`, inbound webhooks return 503 and outbound replies t
 | `pnpm trigger:create` | Create/link cloud project |
 | `pnpm trigger:env` | Sync Trigger.dev keys → `.env.local` |
 | `pnpm trigger:dev` | Trigger.dev dev worker |
+| `pnpm trigger:clean` | Cancel stuck runs + clear `.trigger` cache |
+| `pnpm trigger:smoke` | Inbound Trigger task health check |
 
 ## Project layout
 
