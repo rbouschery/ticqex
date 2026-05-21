@@ -13,6 +13,10 @@ import {
   setTicketTags,
 } from "@server/services/tags";
 import type { AuthContext } from "@server/middleware/auth";
+import {
+  getUnreadCountsByTicket,
+  loadReadMessageIds,
+} from "@server/services/message-reads";
 
 type CreateTicketInput = {
   title: string;
@@ -126,7 +130,20 @@ function formatTicketListItem(
   };
 }
 
-export async function getTicket(id: string) {
+function attachMessageReadState(
+  messages: Record<string, unknown>[],
+  readIds: Set<string>,
+) {
+  return messages.map((msg) => {
+    const isIncoming = msg.author_type === "customer";
+    return {
+      ...msg,
+      read: isIncoming ? readIds.has(msg.id as string) : true,
+    };
+  });
+}
+
+export async function getTicket(id: string, userId?: string) {
   const db = createAdminClient();
   const { data, error } = await db
     .from("tickets")
@@ -147,9 +164,19 @@ export async function getTicket(id: string) {
     .eq("ticket_id", id)
     .order("created_at");
 
+  const rows = messages ?? [];
+  let enrichedMessages = rows;
+  if (userId && rows.length) {
+    const customerIds = rows
+      .filter((m) => m.author_type === "customer")
+      .map((m) => m.id);
+    const readIds = await loadReadMessageIds(customerIds, userId);
+    enrichedMessages = attachMessageReadState(rows, readIds);
+  }
+
   return {
     ...formatTicketListItem(data, fieldsMap, tagsMap),
-    messages: messages ?? [],
+    messages: enrichedMessages,
   };
 }
 
@@ -342,11 +369,17 @@ export async function getTicketContext(id: string, excludeInternal = false) {
   return lines.join("\n");
 }
 
-export async function enrichTicketsForBoard(ticketRows: Record<string, unknown>[]) {
+export async function enrichTicketsForBoard(
+  ticketRows: Record<string, unknown>[],
+  userId?: string,
+) {
   const db = createAdminClient();
   const ids = ticketRows.map((t) => t.id as string);
   const fieldsMap = await loadCustomFieldsMap(db, "ticket", ids);
   const tagsMap = await loadTagsForTickets(ids);
+  const unreadCounts = userId
+    ? await getUnreadCountsByTicket(ids, userId)
+    : new Map<string, number>();
 
   const previews = new Map<string, string>();
   if (ids.length) {
@@ -380,6 +413,7 @@ export async function enrichTicketsForBoard(ticketRows: Record<string, unknown>[
       custom_fields: fieldsMap.get(t.id as string) ?? {},
       tags: tagsMap.get(t.id as string) ?? [],
       updated_at: t.updated_at,
+      unread_count: unreadCounts.get(t.id as string) ?? 0,
     };
   });
 }

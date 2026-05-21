@@ -2,7 +2,7 @@ import { createAdminClient } from "@server/lib/supabase-admin";
 import { ApiError } from "@server/lib/errors";
 import { enrichTicketsForBoard } from "@server/services/tickets";
 
-export async function getBoard() {
+export async function getBoard(userId?: string) {
   const db = createAdminClient();
 
   const { data: settings, error: settingsErr } = await db
@@ -34,7 +34,7 @@ export async function getBoard() {
       .eq("status_id", status.id)
       .order("updated_at", { ascending: false });
 
-    const enriched = await enrichTicketsForBoard(tickets ?? []);
+    const enriched = await enrichTicketsForBoard(tickets ?? [], userId);
 
     lanes.push({
       status: { id: status.id, name: status.name, color: status.color },

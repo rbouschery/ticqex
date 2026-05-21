@@ -12,6 +12,7 @@ export type BoardTicket = {
   custom_fields: Record<string, unknown>;
   tags: { id: string; name: string; color: string }[];
   updated_at: string;
+  unread_count: number;
 };
 
 export type TicketDetail = BoardTicket & {
@@ -31,4 +32,5 @@ export type MessageRow = {
   author_id: string | null;
   channel: string;
   created_at: string;
+  read?: boolean;
 };

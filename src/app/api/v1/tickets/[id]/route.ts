@@ -7,9 +7,9 @@ import { getTicket, updateTicket, deleteTicket } from "@server/services/tickets"
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: Params) {
-  return withAuth(request, async () => {
+  return withAuth(request, async (auth) => {
     const { id } = await params;
-    return jsonData(await getTicket(id));
+    return jsonData(await getTicket(id, auth.userId));
   });
 }
 

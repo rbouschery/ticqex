@@ -7,6 +7,10 @@ export const messageInputSchema = z.object({
   channel: z.enum(["email", "api", "admin"]).optional(),
 });
 
+export const toggleMessageReadSchema = z.object({
+  read: z.boolean().optional(),
+});
+
 export const createTicketSchema = z.object({
   title: z.string().min(1),
   customer: z.object({ username: z.string().min(1) }),

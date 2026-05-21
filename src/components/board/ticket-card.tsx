@@ -31,8 +31,16 @@ export function TicketCard({
       style={style}
       {...(dragOverlay ? {} : { ...attributes, ...listeners })}
       onClick={onClick}
-      className="cursor-pointer rounded-lg border border-zinc-200 bg-white p-3 shadow-sm hover:border-indigo-300 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-indigo-600"
+      className="relative cursor-pointer rounded-lg border border-zinc-200 bg-white p-3 shadow-sm hover:border-indigo-300 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-indigo-600"
     >
+      {ticket.unread_count > 0 && (
+        <span
+          className="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-semibold text-white shadow-sm"
+          aria-label={`${ticket.unread_count} unread messages`}
+        >
+          {ticket.unread_count > 99 ? "99+" : ticket.unread_count}
+        </span>
+      )}
       <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
         {ticket.title}
       </h3>
