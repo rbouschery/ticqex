@@ -7,7 +7,7 @@ export const processInboundEmailTask = task({
   id: "process-inbound-email",
   retry: { maxAttempts: 3 },
   run: async (payload: { raw: InboundWebhookPayload }) => {
-    const parsed = resendAdapter.parseInbound(payload.raw);
+    const parsed = await resendAdapter.resolveInbound(payload.raw);
     return processInboundEmail(parsed);
   },
 });

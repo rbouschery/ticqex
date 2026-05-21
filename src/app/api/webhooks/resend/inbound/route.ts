@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ accepted: true, queued: true });
   }
 
-  const parsed = resendAdapter.parseInbound(payload);
+  const parsed = await resendAdapter.resolveInbound(payload);
   const result = await processInboundEmail(parsed);
   return NextResponse.json({ accepted: true, ...result });
 }

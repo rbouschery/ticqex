@@ -37,6 +37,8 @@ export type InboundWebhookPayload = Record<string, unknown>;
 export interface EmailAdapter {
   send(params: OutboundEmail): Promise<{ messageId: string }>;
   parseInbound(raw: InboundWebhookPayload): ParsedEmail;
+  /** Fetches full body (and headers) from Resend when the webhook only includes metadata. */
+  resolveInbound(raw: InboundWebhookPayload): Promise<ParsedEmail>;
   verifyWebhookSignature(
     payload: string,
     headers: Headers,

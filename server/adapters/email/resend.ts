@@ -12,11 +12,37 @@ function extractAddress(raw: string): string {
   return (match?.[1] ?? raw).trim().toLowerCase();
 }
 
+function webhookData(raw: InboundWebhookPayload): Record<string, unknown> {
+  const envelope = raw as Record<string, unknown>;
+  return (envelope.data ?? envelope) as Record<string, unknown>;
+}
+
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function headerValue(
+  headers: Record<string, string | string[]> | null | undefined,
+  name: string,
+): string | undefined {
+  if (!headers) return undefined;
+  const lower = name.toLowerCase();
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() !== lower) continue;
+    return Array.isArray(value) ? value[0] : value;
+  }
+  return undefined;
+}
+
 export function createResendAdapter(): EmailAdapter {
   const apiKey = process.env.RESEND_API_KEY;
   const webhookSecret = process.env.RESEND_INBOUND_WEBHOOK_SECRET;
   const resend = apiKey ? new Resend(apiKey) : null;
-  // Webhook verification uses Svix; API key is not required.
   const webhookClient = new Resend("");
 
   return {
@@ -43,15 +69,21 @@ export function createResendAdapter(): EmailAdapter {
     },
 
     parseInbound(raw: InboundWebhookPayload): ParsedEmail {
-      const data = (raw.data ?? raw) as Record<string, unknown>;
+      const data = webhookData(raw);
       const from = extractAddress(String(data.from ?? ""));
-      const to = extractAddress(String(data.to ?? ""));
+      const toRaw = data.to;
+      const to = extractAddress(
+        Array.isArray(toRaw) ? String(toRaw[0] ?? "") : String(toRaw ?? ""),
+      );
       const subject = String(data.subject ?? "(no subject)");
       const text = String(data.text ?? data.html ?? "");
       const headers = (data.headers ?? {}) as Record<string, string | string[]>;
 
       const messageId = String(
-        headers["message-id"] ?? headers["Message-ID"] ?? `<${randomUUID()}@inbound>`,
+        data.message_id ??
+          headers["message-id"] ??
+          headers["Message-ID"] ??
+          `<${randomUUID()}@inbound>`,
       );
       const inReplyTo = headers["in-reply-to"] ?? headers["In-Reply-To"];
       const referencesRaw = headers.references ?? headers.References;
@@ -86,6 +118,49 @@ export function createResendAdapter(): EmailAdapter {
         inReplyTo: typeof inReplyTo === "string" ? inReplyTo : undefined,
         references,
         attachments,
+      };
+    },
+
+    async resolveInbound(raw: InboundWebhookPayload): Promise<ParsedEmail> {
+      const parsed = this.parseInbound(raw);
+      const emailId = String(webhookData(raw).email_id ?? "");
+      if (!emailId || !resend) return parsed;
+
+      const { data: received, error } = await resend.emails.receiving.get(emailId);
+      if (error || !received) {
+        console.error(
+          "Failed to fetch received email body:",
+          error?.message ?? "no data",
+          emailId,
+        );
+        return parsed;
+      }
+
+      const body =
+        received.text?.trim() ||
+        (received.html ? htmlToPlainText(received.html) : "") ||
+        parsed.body;
+
+      const apiHeaders = received.headers;
+      const inReplyTo =
+        headerValue(apiHeaders, "in-reply-to") ?? parsed.inReplyTo;
+      const referencesRaw = headerValue(apiHeaders, "references");
+      let references = parsed.references;
+      if (referencesRaw) {
+        references = referencesRaw.split(/\s+/).filter(Boolean);
+      }
+
+      return {
+        ...parsed,
+        from: extractAddress(received.from) || parsed.from,
+        to: extractAddress(received.to[0] ?? "") || parsed.to,
+        subject: received.subject || parsed.subject,
+        body,
+        messageId: received.message_id
+          ? String(received.message_id)
+          : parsed.messageId,
+        inReplyTo,
+        references,
       };
     },
 

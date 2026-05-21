@@ -167,6 +167,8 @@ Do not commit `.env.local` or `~/.cloudflared/*` — VM-only secrets.
 
 Use the **raw request body** (string) when verifying — re-stringifying parsed JSON breaks the signature.
 
+**Metadata-only webhooks:** `email.received` payloads do not include the body. The app calls `resend.emails.receiving.get(email_id)` in `resolveInbound()` before creating the ticket message. Without this, tickets are created with an empty body.
+
 Inbound receiving (MX/domain) must be enabled in Resend separately from the webhook.
 
 ### Trigger.dev
