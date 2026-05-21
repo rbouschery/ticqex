@@ -24,7 +24,8 @@
     "trigger:dev": "trigger dev --env-file .env.local --max-concurrent-runs 10",
     "trigger:clean": "rm -rf .trigger && tsx --env-file=.env.local scripts/cancel-stuck-trigger-runs.ts",
     "trigger:smoke": "tsx --env-file=.env.local scripts/trigger-smoke-test.ts",
-    "trigger:watchdog": "tsx --env-file=.env.local scripts/trigger-stuck-watchdog.ts"
+    "trigger:watchdog": "tsx --env-file=.env.local scripts/trigger-stuck-watchdog.ts",
+    "test:message-reads": "tsx --env-file=.env.local scripts/test-message-reads.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

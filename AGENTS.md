@@ -246,4 +246,39 @@ These are separate Resend settings. Inbound needs receiving enabled; outbound ne
 
 ### Standard commands
 
-`pnpm lint`, `pnpm build`, `pnpm dev`, `pnpm dev:all`, `pnpm env:sync`, `pnpm env:verify`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:env`, `pnpm db:seed-admin`, `pnpm trigger:login`, `pnpm trigger:create`, `pnpm trigger:env`, `pnpm trigger:dev`, `pnpm trigger:clean`, `pnpm trigger:smoke`, `pnpm trigger:watchdog`.
+`pnpm lint`, `pnpm build`, `pnpm dev`, `pnpm dev:all`, `pnpm env:sync`, `pnpm env:verify`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:env`, `pnpm db:seed-admin`, `pnpm trigger:login`, `pnpm trigger:create`, `pnpm trigger:env`, `pnpm trigger:dev`, `pnpm trigger:clean`, `pnpm trigger:smoke`, `pnpm trigger:watchdog`, `pnpm test:message-reads`.
+
+### Agent workflow: finish work locally
+
+When implementing features in this cloud VM, **be proactive** — do not stop at code + PR. Before handing off:
+
+1. **Apply migrations locally (local only)** — After adding or changing files under `supabase/migrations/`, apply them to the **local** Supabase instance only:
+   ```bash
+   pnpm db:reset          # clean apply of all migrations + seed
+   # or, if DB is already up and you only need pending migrations:
+   pnpm db:start          # applies new migrations on start when possible
+   ```
+   **Never** run migrations against production or a remote Supabase project from the agent. Local DB is `127.0.0.1:54322`.
+
+   If `db:reset` fails on container restart, run `pnpm db:stop && pnpm db:start`. Confirm the new schema exists (e.g. `docker exec supabase_db_ticqex psql -U postgres -c '\d public.<table>'`).
+
+2. **Sync environment** — After reset or first boot:
+   ```bash
+   pnpm env:sync
+   pnpm db:seed-admin
+   ```
+
+3. **Start the app and health-check** — Use `pnpm dev` (UI/API only) or `pnpm dev:all` (email/Trigger flows). Confirm:
+   ```bash
+   curl -s http://127.0.0.1:3000/api/health
+   ```
+   Expect `"database":"ok"`.
+
+4. **Always test the change** — Verify end-to-end before finishing:
+   - Run targeted smoke scripts when they exist (e.g. `pnpm test:message-reads` for read/unread).
+   - For UI work, exercise the flow in the browser (login: `admin@ticqex.local` / `ticqex-admin-change-me`).
+   - For API-only changes, call the routes with a real JWT (see scripts under `scripts/`).
+
+5. **Report what you ran** — In the PR or final message, state that migrations were applied locally and which tests passed.
+
+Add a focused script under `scripts/test-*.ts` when a feature needs repeatable verification and wire it in `package.json` if it will be reused.
