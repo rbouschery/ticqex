@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { createHmac, randomUUID, timingSafeEqual } from "crypto";
+import { randomUUID } from "crypto";
 import type {
   EmailAdapter,
   InboundWebhookPayload,
@@ -16,6 +16,8 @@ export function createResendAdapter(): EmailAdapter {
   const apiKey = process.env.RESEND_API_KEY;
   const webhookSecret = process.env.RESEND_INBOUND_WEBHOOK_SECRET;
   const resend = apiKey ? new Resend(apiKey) : null;
+  // Webhook verification uses Svix; API key is not required.
+  const webhookClient = new Resend("");
 
   return {
     async send(params: OutboundEmail) {
@@ -89,14 +91,21 @@ export function createResendAdapter(): EmailAdapter {
 
     verifyWebhookSignature(payload: string, headers: Headers) {
       if (!webhookSecret) return process.env.NODE_ENV !== "production";
-      const signature = headers.get("svix-signature") ?? headers.get("resend-signature");
-      if (!signature) return false;
 
-      const expected = createHmac("sha256", webhookSecret).update(payload).digest("hex");
+      const id = headers.get("svix-id");
+      const timestamp = headers.get("svix-timestamp");
+      const signature = headers.get("svix-signature");
+      if (!id || !timestamp || !signature) return false;
+
       try {
-        return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+        webhookClient.webhooks.verify({
+          payload,
+          headers: { id, timestamp, signature },
+          webhookSecret,
+        });
+        return true;
       } catch {
-        return signature === expected || signature.includes(expected);
+        return false;
       }
     },
   };
