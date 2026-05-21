@@ -211,6 +211,28 @@ pnpm env:verify
 
 After code edits, worker version churn (e.g. `20260521.10` → `.11`) can leave old runs pending — `pnpm trigger:clean` and restart.
 
+Recovery is not instant — the watchdog polls every 15s and only acts on runs stuck 20s+. If email still missing after ~1 minute, run `pnpm trigger:clean && pnpm dev:all`.
+
+**Manual replay** (when watchdog or a single run still fails): cancel the stuck run (`pnpm trigger:clean` or Trigger dashboard), then re-trigger with a **new idempotency suffix** (e.g. `inbound:resend:{email_id}:replay1`). Re-using the same idempotency key after cancel returns the cancelled run instead of executing again.
+
+**Verify delivery in the database** — a webhook `200 {"accepted":true,"queued":true}` only means the Trigger task was queued, not that processing finished:
+
+| Direction | Success signal |
+|-----------|----------------|
+| Inbound | New row in `tickets` / `messages`; body populated (not empty) |
+| Outbound | `messages.email_message_id` set (e.g. `<uuid@resend.dev>`) |
+
+**Debugging runs:** In the Trigger dashboard, filter by task `process-inbound-email` or `send-outbound-email`. Status `DEQUEUED` means the local worker did not pick up the run. Worker logs appear as `[trigger]` lines in the `pnpm dev:all` terminal.
+
+### Inbound vs outbound addressing
+
+| Role | Example | Config |
+|------|---------|--------|
+| Inbound (customers email this address) | `hello@support.readbetter.io` | Resend receiving domain + MX |
+| Outbound From | `SUPPORT_EMAIL` in harness (e.g. verified sender on `readbetter.io`) | Resend domain verification |
+
+These are separate Resend settings. Inbound needs receiving enabled; outbound needs a verified sender. Both must match what customers and the app expect.
+
 ### Key gotchas
 
 - **Docker in cloud VM**: Requires `fuse-overlayfs` storage driver and `iptables-legacy`. `/etc/docker/daemon.json` should include `{"storage-driver": "fuse-overlayfs"}`.
