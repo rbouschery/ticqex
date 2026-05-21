@@ -26,7 +26,7 @@ export async function enrichTicketsForBoard(
 
   for (const t of ticketRows) {
     if (t.kind === "task") {
-      const body = String(t.body ?? "").trim();
+      const body = (t.body ?? "").trim();
       if (body) previews.set(t.id, messagePreview(body));
     }
   }

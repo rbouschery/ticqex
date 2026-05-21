@@ -47,15 +47,7 @@ export type TicketListRow = {
 export const TICKET_LIST_SELECT =
   "*, customers(id, username), users:assignee_id(id, username), status_types(id, name, color)";
 
-/** Row shape for board lane ticket select (subset of list fields). */
-export type BoardTicketCustomer = {
-  username: string;
-};
-
-export type BoardTicketAssignee = {
-  username: string;
-};
-
+/** Row shape for board lane ticket select (preview enrichment input). */
 export type BoardTicketRow = {
   id: string;
   title: string;
@@ -63,8 +55,8 @@ export type BoardTicketRow = {
   channel: string | null;
   body: string | null;
   updated_at: string;
-  customers: BoardTicketCustomer | null;
-  users: BoardTicketAssignee | null;
+  customers: { username: string } | null;
+  users: { username: string } | null;
 };
 
 export const BOARD_TICKET_SELECT =

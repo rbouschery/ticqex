@@ -164,16 +164,15 @@ SUPPORT_FROM_NAME=Support
 ```typescript
 // /trigger/process-inbound-email.ts
 import { task } from "@trigger.dev/sdk/v3"
+import { resendAdapter } from "@server/adapters/email/resend"
+import { processInboundEmail } from "@server/services/email-inbound"
 
-export const processInboundEmail = task({
+export const processInboundEmailTask = task({
   id: "process-inbound-email",
   retry: { maxAttempts: 3 },
   run: async (payload: { raw: InboundWebhookPayload }) => {
-    const parsed = emailAdapter.parseInbound(payload.raw)
-    const customer = await findOrCreateCustomer(parsed.from)
-    const ticket = await matchOrCreateTicket(parsed, customer)
-    await createInboundCustomerMessage(ticketId, parsed)
-    await storeAttachments(ticketId, message.id, parsed.attachments)
+    const parsed = await resendAdapter.resolveInbound(payload.raw)
+    return processInboundEmail(parsed)
   },
 })
 ```
