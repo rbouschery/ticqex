@@ -18,33 +18,68 @@ export async function loadReadMessageIds(
   return new Set((data ?? []).map((row) => row.message_id));
 }
 
-export async function getUnreadCountsByTicket(
-  ticketIds: string[],
+async function loadUnreadCustomerMessages(
   userId: string,
-): Promise<Map<string, number>> {
-  if (!ticketIds.length) return new Map();
+  ticketIds?: string[],
+): Promise<{ ticketId: string; messageId: string }[]> {
+  if (ticketIds !== undefined && ticketIds.length === 0) return [];
 
   const db = createAdminClient();
-  const { data: messages, error } = await db
+  let query = db
     .from("messages")
     .select("id, ticket_id")
-    .in("ticket_id", ticketIds)
     .eq("author_type", "customer");
 
+  if (ticketIds?.length) {
+    query = query.in("ticket_id", ticketIds);
+  }
+
+  const { data: messages, error } = await query;
   if (error) throw ApiError.internal(error.message);
-  if (!messages?.length) return new Map();
+  if (!messages?.length) return [];
 
   const readIds = await loadReadMessageIds(
     messages.map((m) => m.id),
     userId,
   );
 
+  return messages
+    .filter((msg) => !readIds.has(msg.id))
+    .map((msg) => ({ ticketId: msg.ticket_id, messageId: msg.id }));
+}
+
+export async function getUnreadCountsByTicket(
+  ticketIds: string[],
+  userId: string,
+): Promise<Map<string, number>> {
+  const unread = await loadUnreadCustomerMessages(userId, ticketIds);
   const counts = new Map<string, number>();
-  for (const msg of messages) {
-    if (readIds.has(msg.id)) continue;
-    counts.set(msg.ticket_id, (counts.get(msg.ticket_id) ?? 0) + 1);
+  for (const { ticketId } of unread) {
+    counts.set(ticketId, (counts.get(ticketId) ?? 0) + 1);
   }
   return counts;
+}
+
+export async function getTicketIdsByUnreadState(
+  userId: string,
+  hasUnread: boolean,
+): Promise<Set<string>> {
+  const unreadMessages = await loadUnreadCustomerMessages(userId);
+  const unreadTicketIds = new Set(unreadMessages.map((msg) => msg.ticketId));
+
+  if (hasUnread) return unreadTicketIds;
+
+  const db = createAdminClient();
+  const { data: tickets, error } = await db.from("tickets").select("id, kind");
+  if (error) throw ApiError.internal(error.message);
+
+  const ids = new Set<string>();
+  for (const ticket of tickets ?? []) {
+    if (ticket.kind === "task" || !unreadTicketIds.has(ticket.id)) {
+      ids.add(ticket.id);
+    }
+  }
+  return ids;
 }
 
 export async function setMessageReadState(

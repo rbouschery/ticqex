@@ -53,14 +53,17 @@ export type BoardTicketRow = {
   title: string;
   kind: TicketKind;
   channel: string | null;
+  origin: TicketOrigin;
+  customer_id: string | null;
+  assignee_id: string | null;
   body: string | null;
   updated_at: string;
-  customers: { username: string } | null;
-  users: { username: string } | null;
+  customers: { id: string; username: string } | null;
+  users: { id: string; username: string } | null;
 };
 
 export const BOARD_TICKET_SELECT =
-  "id, title, kind, channel, body, updated_at, customers(username), users:assignee_id(username)";
+  "id, title, kind, channel, origin, customer_id, assignee_id, body, updated_at, customers(id, username), users:assignee_id(id, username)";
 
 export type TicketRow = {
   id: string;

@@ -51,6 +51,9 @@ export async function enrichTicketsForBoard(
     title: t.title,
     kind: t.kind,
     channel: t.channel ?? null,
+    origin: t.origin,
+    customer_id: t.customer_id,
+    assignee_id: t.assignee_id,
     preview: previews.get(t.id) ?? "",
     customer: t.customers
       ? { username: t.customers.username, initials: initials(t.customers.username) }

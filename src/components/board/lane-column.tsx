@@ -8,9 +8,11 @@ import type { BoardLane } from "./types";
 
 export function LaneColumn({
   lane,
+  filterActive = false,
   onTicketClick,
 }: {
   lane: BoardLane;
+  filterActive?: boolean;
   onTicketClick: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: lane.status.id });
@@ -40,7 +42,9 @@ export function LaneColumn({
         />
         <h2 className="text-sm font-medium text-foreground">{lane.status.name}</h2>
         <Badge variant="secondary" className="ml-auto">
-          {lane.tickets.length}
+          {filterActive && lane.total_count !== undefined
+            ? `${lane.tickets.length} / ${lane.total_count}`
+            : lane.tickets.length}
         </Badge>
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-2 pt-2.5">

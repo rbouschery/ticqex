@@ -14,17 +14,20 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api-client";
+import { useBoardFilter } from "@/hooks/use-board-filter";
 import { useBoardRealtime } from "@/hooks/use-board-realtime";
+import { BoardFilterBar } from "./board-filter-bar";
 import { TicketCard } from "./ticket-card";
 import { LaneColumn } from "./lane-column";
 import { TicketModal } from "./ticket-modal";
 import { CreateTicketModal } from "./create-ticket-modal";
-import type { BoardLane, BoardTicket } from "./types";
+import type { BoardLane, BoardTicket, TicketDetail } from "./types";
 
 /** Debounce window + buffer — skip self-echo realtime refresh after local DnD. */
 const REALTIME_MUTE_MS = 600;
 
 export function KanbanBoard() {
+  const { filter, setFilter, filterActive, boardQueryString } = useBoardFilter();
   const [lanes, setLanes] = useState<BoardLane[]>([]);
   const [allStatuses, setAllStatuses] = useState<{ id: string; name: string }[]>(
     [],
@@ -36,44 +39,56 @@ export function KanbanBoard() {
   const [activeTicket, setActiveTicket] = useState<BoardTicket | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
   const muteRealtimeUntil = useRef(0);
+  const initialLoadDone = useRef(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  const loadBoard = useCallback(async (options?: { silent?: boolean }) => {
-    if (!options?.silent) {
-      setLoading(true);
-      setError(null);
-    }
-    try {
-      const [data, statuses] = await Promise.all([
-        apiFetch<{ lanes: BoardLane[] }>("/api/v1/board"),
-        apiFetch<{ id: string; name: string }[]>("/api/v1/statuses"),
-      ]);
-      setLanes(data.lanes);
-      setAllStatuses(statuses);
-    } catch (e) {
+  const loadBoard = useCallback(
+    async (options?: { silent?: boolean }) => {
       if (!options?.silent) {
-        setError(e instanceof Error ? e.message : "Failed to load board");
+        setLoading(true);
+        setError(null);
       }
-    } finally {
-      if (!options?.silent) {
-        setLoading(false);
+      try {
+        const [data, statuses] = await Promise.all([
+          apiFetch<{ lanes: BoardLane[] }>(`/api/v1/board${boardQueryString}`),
+          apiFetch<{ id: string; name: string }[]>("/api/v1/statuses"),
+        ]);
+        setLanes(data.lanes);
+        setAllStatuses(statuses);
+      } catch (e) {
+        if (!options?.silent) {
+          setError(e instanceof Error ? e.message : "Failed to load board");
+        }
+      } finally {
+        if (!options?.silent) {
+          setLoading(false);
+        }
       }
-    }
-  }, []);
+    },
+    [boardQueryString],
+  );
 
   const refreshBoard = useCallback(() => {
     void loadBoard({ silent: true });
   }, [loadBoard]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount
-    void loadBoard();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount and filter changes
+    void loadBoard({ silent: initialLoadDone.current });
+    initialLoadDone.current = true;
   }, [loadBoard]);
 
   useBoardRealtime(refreshBoard, muteRealtimeUntil);
+
+  const handleBoardChange = useCallback(
+    (_updated?: TicketDetail) => {
+      void loadBoard({ silent: true });
+    },
+    [loadBoard],
+  );
 
   function findTicket(id: string) {
     for (const lane of lanes) {
@@ -122,6 +137,16 @@ export function KanbanBoard() {
     }
   }
 
+  const header = (
+    <div className="flex shrink-0 items-start gap-3 px-4 pt-3">
+      <BoardFilterBar filter={filter} onFilterChange={setFilter} />
+      <Button size="sm" className="shrink-0" onClick={() => setShowCreate(true)}>
+        <PlusIcon />
+        New task
+      </Button>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
@@ -139,7 +164,7 @@ export function KanbanBoard() {
           <TicketModal
             ticketId={selectedId}
             onClose={() => setSelectedId(null)}
-            onBoardChange={refreshBoard}
+            onBoardChange={handleBoardChange}
           />
         )}
       </div>
@@ -158,12 +183,7 @@ export function KanbanBoard() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 justify-end px-4 pt-3">
-        <Button size="sm" onClick={() => setShowCreate(true)}>
-          <PlusIcon />
-          New task
-        </Button>
-      </div>
+      {header}
 
       {moveError && (
         <Alert variant="destructive" className="mx-4 mt-2 shrink-0">
@@ -186,6 +206,7 @@ export function KanbanBoard() {
                 <LaneColumn
                   key={lane.status.id}
                   lane={lane}
+                  filterActive={filterActive}
                   onTicketClick={setSelectedId}
                 />
               ))}
@@ -205,7 +226,7 @@ export function KanbanBoard() {
         <TicketModal
           ticketId={selectedId}
           onClose={() => setSelectedId(null)}
-          onBoardChange={refreshBoard}
+          onBoardChange={handleBoardChange}
         />
       )}
 

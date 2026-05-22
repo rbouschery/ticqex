@@ -57,7 +57,7 @@ export function TicketModal({
 }: {
   ticketId: string;
   onClose: () => void;
-  onBoardChange: () => void;
+  onBoardChange: (updated?: TicketDetail) => void;
 }) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [users, setUsers] = useState<StaffUser[]>([]);
@@ -158,7 +158,15 @@ export function TicketModal({
         method: "PATCH",
         body: JSON.stringify(payload),
       });
-      await load();
+      const refreshed = await apiFetch<TicketDetail>(`/api/v1/tickets/${ticketId}`);
+      setTicket(refreshed);
+      setTitle(refreshed.title);
+      setAssigneeId(refreshed.assignee_id ?? "");
+      setTagInput(refreshed.tags.map((t) => t.name).join(", "));
+      if (isTaskDetail(refreshed)) {
+        setBody(refreshed.body ?? "");
+      }
+      onBoardChange();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
     } finally {

@@ -15,11 +15,8 @@ function useDebouncedRefresh(
 
   useEffect(() => {
     onRefreshRef.current = onRefresh;
-  }, [onRefresh]);
-
-  useEffect(() => {
     mutedUntilRefStable.current = mutedUntilRef;
-  }, [mutedUntilRef]);
+  }, [onRefresh, mutedUntilRef]);
 
   useEffect(() => {
     return () => {

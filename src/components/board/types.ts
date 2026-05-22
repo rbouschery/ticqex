@@ -3,6 +3,7 @@ import type { TicketChannel, TicketKind } from "@/types/database";
 export type BoardLane = {
   status: { id: string; name: string; color: string };
   tickets: BoardTicket[];
+  total_count?: number;
 };
 
 export type BoardTicket = {
@@ -10,6 +11,9 @@ export type BoardTicket = {
   title: string;
   kind: TicketKind;
   channel: TicketChannel | null;
+  origin: string;
+  customer_id: string | null;
+  assignee_id: string | null;
   preview: string;
   customer: { username: string; initials: string } | null;
   assignee: { username: string; initials: string } | null;
@@ -20,12 +24,9 @@ export type BoardTicket = {
 };
 
 export type TicketDetailBase = BoardTicket & {
-  origin: string;
   body: string | null;
   contact_address: string | null;
-  customer_id: string | null;
   status_id: string;
-  assignee_id: string | null;
   status: { id: string; name: string; color: string } | null;
 };
 

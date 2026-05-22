@@ -39,6 +39,16 @@ export async function getDefaultStatusId() {
   return statuses[0]!.id;
 }
 
+export async function getVisibleStatusIds(db = createAdminClient()) {
+  const { data, error } = await db
+    .from("status_types")
+    .select("id")
+    .eq("is_visible", true)
+    .order("position");
+  if (error) throw ApiError.internal(error.message);
+  return (data ?? []).map((row) => row.id as string);
+}
+
 export async function getInboundEmailStatusId() {
   const db = createAdminClient();
   const { data: settings, error: settingsErr } = await db
