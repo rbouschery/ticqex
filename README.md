@@ -6,7 +6,7 @@ Spec and planning docs live in [`docs/`](./docs/README.md).
 
 ## Status
 
-**Phase 0 (Foundation)** — Next.js app, Supabase schema, staff auth, health check. See [PHASES.md](./docs/PHASES.md).
+**Phase 4 (Live board)** — Supabase Realtime sync across tabs; drag-and-drop error feedback. See [PHASES.md](./docs/PHASES.md).
 
 ## Quick start
 

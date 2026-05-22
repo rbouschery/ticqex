@@ -54,7 +54,6 @@ export function EmailMessageHeader({
 }) {
   const [expanded, setExpanded] = useState(false);
   const isEmail = isEmailMessage(message);
-  const isNote = message.visibility === "internal";
 
   const showDelivery =
     isOutbound && isEmail && Boolean(message.email_delivery_status);
@@ -66,11 +65,10 @@ export function EmailMessageHeader({
           variant="outline"
           className={cn(
             "text-[10px] uppercase",
-            isNote && "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-            !isNote && isEmail && "border-primary/30 bg-primary/10 text-primary",
+            isEmail && "border-primary/30 bg-primary/10 text-primary",
           )}
         >
-          {isNote ? "Note" : isEmail ? "Email" : "Message"}
+          {isEmail ? "Email" : "Message"}
         </Badge>
 
         {showDelivery && message.email_delivery_status && (

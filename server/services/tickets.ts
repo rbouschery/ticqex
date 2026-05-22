@@ -152,6 +152,7 @@ export async function getTicket(id: string, userId?: string) {
     .from("messages")
     .select("*")
     .eq("ticket_id", id)
+    .eq("visibility", "public")
     .order("created_at");
 
   const enrichedMessages = await enrichTicketMessages(messages ?? [], userId);
@@ -219,6 +220,7 @@ export async function getTicketForContext(id: string) {
     .from("messages")
     .select("id, body, visibility, author_type, author_id, created_at")
     .eq("ticket_id", id)
+    .eq("visibility", "public")
     .order("created_at");
 
   return { ...base, messages: (messages ?? []) as ContextMessageRow[] };

@@ -37,8 +37,6 @@ export function EmailCompose({
   customerEmail,
   ticketTitle,
   lastEmailMessage,
-  internal,
-  onInternalChange,
   onSubmit,
   saving,
 }: {
@@ -46,8 +44,6 @@ export function EmailCompose({
   customerEmail: string;
   ticketTitle: string;
   lastEmailMessage: MessageRow | null;
-  internal: boolean;
-  onInternalChange: (internal: boolean) => void;
   onSubmit: (payload: EmailComposePayload) => Promise<void>;
   saving: boolean;
 }) {
@@ -65,11 +61,10 @@ export function EmailCompose({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (internal) return;
     apiFetch<EmailSnippet[]>("/api/v1/email-snippets")
       .then(setSnippets)
       .catch(() => setSnippets([]));
-  }, [internal]);
+  }, []);
 
   const resetEmailFields = useCallback(() => {
     setCc([]);
@@ -115,19 +110,14 @@ export function EmailCompose({
 
     const payload: EmailComposePayload = {
       body: body.trim(),
-      visibility: internal ? "internal" : "public",
-      channel: internal ? "admin" : "email",
-    };
-
-    if (!internal) {
-      payload.email = {
+      email: {
         cc,
         subject: subject.trim() || undefined,
         reply_all: replyAll,
         include_quote: includeQuote,
         attachment_upload_ids: attachments.map((a) => a.id),
-      };
-    }
+      },
+    };
 
     await onSubmit(payload);
     setBody("");
@@ -137,109 +127,105 @@ export function EmailCompose({
   return (
     <form
       onSubmit={(e) => void handleSubmit(e)}
-      className="border-t border-border p-4"
+      className="p-4"
     >
-      {!internal && (
-        <div className="mb-3 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="xs"
-              variant={!replyAll ? "default" : "outline"}
-              onClick={() => handleReplyMode(false)}
-            >
-              Reply
-            </Button>
-            <Button
-              type="button"
-              size="xs"
-              variant={replyAll ? "default" : "outline"}
-              onClick={() => handleReplyMode(true)}
-            >
-              Reply all
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <Label>To</Label>
-            <Input readOnly value={customerEmail} className="cursor-not-allowed opacity-70" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Cc</Label>
-            <CcChipInput cc={cc} onChange={setCc} />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Subject</Label>
-            <Input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
-          </div>
+      <div className="mb-3 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="xs"
+            variant={!replyAll ? "default" : "outline"}
+            onClick={() => handleReplyMode(false)}
+          >
+            Reply
+          </Button>
+          <Button
+            type="button"
+            size="xs"
+            variant={replyAll ? "default" : "outline"}
+            onClick={() => handleReplyMode(true)}
+          >
+            Reply all
+          </Button>
         </div>
-      )}
+
+        <div className="space-y-2">
+          <Label>To</Label>
+          <Input readOnly value={customerEmail} className="cursor-not-allowed opacity-70" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Cc</Label>
+          <CcChipInput cc={cc} onChange={setCc} />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Subject</Label>
+          <Input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+          />
+        </div>
+      </div>
 
       <Textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        rows={internal ? 3 : 5}
-        placeholder={internal ? "Write an internal note…" : "Write your reply…"}
+        rows={5}
+        placeholder="Write your reply…"
       />
 
-      {!internal && (
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="include-quote"
-              checked={includeQuote}
-              onCheckedChange={(checked) => setIncludeQuote(checked === true)}
-            />
-            <Label htmlFor="include-quote" className="text-xs">
-              Include quoted text
-            </Label>
-          </div>
-
-          {snippets.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Label className="text-xs">Snippet</Label>
-              <Select
-                value={snippetId || undefined}
-                onValueChange={insertSnippet}
-              >
-                <SelectTrigger size="sm" className="w-40">
-                  <SelectValue placeholder="Insert snippet…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {snippets.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => void handleFileSelect(e.target.files)}
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="include-quote"
+            checked={includeQuote}
+            onCheckedChange={(checked) => setIncludeQuote(checked === true)}
           />
-          <Button
-            type="button"
-            variant="link"
-            size="xs"
-            disabled={uploading}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <PaperclipIcon />
-            {uploading ? "Uploading…" : "Attach files"}
-          </Button>
+          <Label htmlFor="include-quote" className="text-xs">
+            Include quoted text
+          </Label>
         </div>
-      )}
+
+        {snippets.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Label className="text-xs">Snippet</Label>
+            <Select
+              value={snippetId || undefined}
+              onValueChange={insertSnippet}
+            >
+              <SelectTrigger size="sm" className="w-40">
+                <SelectValue placeholder="Insert snippet…" />
+              </SelectTrigger>
+              <SelectContent>
+                {snippets.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => void handleFileSelect(e.target.files)}
+        />
+        <Button
+          type="button"
+          variant="link"
+          size="xs"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <PaperclipIcon />
+          {uploading ? "Uploading…" : "Attach files"}
+        </Button>
+      </div>
 
       {attachments.length > 0 && (
         <ul className="mt-2 flex flex-wrap gap-2">
@@ -265,23 +251,13 @@ export function EmailCompose({
         </ul>
       )}
 
-      <div className="mt-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="email-internal"
-            checked={internal}
-            onCheckedChange={(checked) => onInternalChange(checked === true)}
-          />
-          <Label htmlFor="email-internal" className="text-xs">
-            Internal note
-          </Label>
-        </div>
+      <div className="mt-2 flex justify-end">
         <Button
           type="submit"
           size="sm"
           disabled={saving || uploading || !body.trim()}
         >
-          {internal ? "Add note" : "Send email"}
+          Send email
         </Button>
       </div>
     </form>

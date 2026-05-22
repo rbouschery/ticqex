@@ -22,7 +22,6 @@ export async function POST(request: NextRequest, { params }: Params) {
       id,
       {
         body: body.body,
-        visibility: body.visibility,
         channel: body.channel ?? "admin",
         email: body.email,
       },

@@ -13,7 +13,6 @@ export const emailComposeOptionsSchema = z.object({
 
 export const messageInputSchema = z.object({
   body: z.string().min(1),
-  visibility: z.enum(["public", "internal"]).default("public"),
   channel: z.enum(["email", "api", "admin"]).optional(),
   email: emailComposeOptionsSchema.optional(),
 });
@@ -126,6 +125,7 @@ export const patchSettingsSchema = z.object({
   visible_ticket_field_ids: z.array(z.string().uuid()).optional(),
   visible_customer_field_ids: z.array(z.string().uuid()).optional(),
   email_signature: z.string().optional(),
+  email_thread_order: z.enum(["oldest_first", "newest_first"]).optional(),
 });
 
 export const createApiKeySchema = z.object({

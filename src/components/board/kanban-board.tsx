@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -14,11 +14,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api-client";
+import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { TicketCard } from "./ticket-card";
 import { LaneColumn } from "./lane-column";
 import { TicketModal } from "./ticket-modal";
 import { CreateTicketModal } from "./create-ticket-modal";
 import type { BoardLane, BoardTicket } from "./types";
+
+/** Debounce window + buffer — skip self-echo realtime refresh after local DnD. */
+const REALTIME_MUTE_MS = 600;
 
 export function KanbanBoard() {
   const [lanes, setLanes] = useState<BoardLane[]>([]);
@@ -30,6 +34,8 @@ export function KanbanBoard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [activeTicket, setActiveTicket] = useState<BoardTicket | null>(null);
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const muteRealtimeUntil = useRef(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -67,6 +73,8 @@ export function KanbanBoard() {
     void loadBoard();
   }, [loadBoard]);
 
+  useBoardRealtime(refreshBoard, muteRealtimeUntil);
+
   function findTicket(id: string) {
     for (const lane of lanes) {
       const t = lane.tickets.find((x) => x.id === id);
@@ -84,6 +92,9 @@ export function KanbanBoard() {
     const newStatusId = String(over.id);
     const found = findTicket(ticketId);
     if (!found || found.statusId === newStatusId) return;
+
+    setMoveError(null);
+    muteRealtimeUntil.current = Date.now() + REALTIME_MUTE_MS;
 
     setLanes((prev) =>
       prev.map((l) => {
@@ -106,15 +117,15 @@ export function KanbanBoard() {
         body: JSON.stringify({ status_id: newStatusId }),
       });
     } catch {
-      void loadBoard();
+      setMoveError("Could not move ticket. Changes were reverted.");
+      void loadBoard({ silent: true });
     }
   }
 
   if (loading) {
     return (
-      <div className="flex h-full min-h-0 flex-col">
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-          <Skeleton className="h-7 w-48" />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex shrink-0 justify-end px-4 pt-3">
           <Skeleton className="h-8 w-24" />
         </div>
         <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
@@ -137,7 +148,7 @@ export function KanbanBoard() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="flex flex-1 p-8">
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -146,16 +157,19 @@ export function KanbanBoard() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-        <h1 className="font-heading text-lg font-semibold text-foreground">
-          Support board
-        </h1>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 justify-end px-4 pt-3">
         <Button size="sm" onClick={() => setShowCreate(true)}>
           <PlusIcon />
           New task
         </Button>
       </div>
+
+      {moveError && (
+        <Alert variant="destructive" className="mx-4 mt-2 shrink-0">
+          <AlertDescription>{moveError}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col">
         <DndContext

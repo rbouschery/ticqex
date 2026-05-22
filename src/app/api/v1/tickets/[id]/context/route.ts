@@ -7,9 +7,7 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(request: NextRequest, { params }: Params) {
   return withAuth(request, async () => {
     const { id } = await params;
-    const excludeInternal =
-      request.nextUrl.searchParams.get("exclude_internal") === "true";
-    const markdown = await getTicketContext(id, excludeInternal);
+    const markdown = await getTicketContext(id);
     return new Response(markdown, {
       headers: { "Content-Type": "text/markdown; charset=utf-8" },
     });

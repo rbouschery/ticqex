@@ -43,7 +43,7 @@ export function LaneColumn({
           {lane.tickets.length}
         </Badge>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-2 pt-2.5">
         {lane.tickets.map((ticket) => (
           <TicketCard
             key={ticket.id}

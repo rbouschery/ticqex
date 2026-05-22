@@ -35,20 +35,20 @@ export function TicketCard({
       style={style}
       {...(dragOverlay ? {} : { ...attributes, ...listeners })}
       onClick={onClick}
-      className={cn(dragOverlay && "shadow-lg")}
+      className={cn("relative", dragOverlay && "shadow-lg")}
     >
-      <Card
-        size="sm"
-        className="relative cursor-pointer py-0 transition-colors hover:ring-ring/50 hover:ring-2"
-      >
       {ticket.unread_count > 0 && (
         <Badge
-          className="absolute -right-1.5 -top-1.5 h-5 min-w-5 justify-center px-1 text-[10px]"
+          className="absolute -right-1.5 -top-1.5 z-10 h-5 min-w-5 justify-center border-2 border-card bg-red-600 px-1 text-[10px] font-bold text-white hover:bg-red-600"
           aria-label={`${ticket.unread_count} unread messages`}
         >
           {ticket.unread_count > 99 ? "99+" : ticket.unread_count}
         </Badge>
       )}
+      <Card
+        size="sm"
+        className="cursor-pointer py-0 transition-colors hover:ring-ring/50 hover:ring-2"
+      >
       <CardContent className="space-y-2 py-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-sm font-medium text-foreground">{ticket.title}</h3>

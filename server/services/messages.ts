@@ -105,6 +105,7 @@ export async function listMessages(ticketId: string) {
     .from("messages")
     .select("*")
     .eq("ticket_id", ticketId)
+    .eq("visibility", "public")
     .order("created_at");
   if (error) throw ApiError.internal(error.message);
   return data ?? [];
@@ -189,6 +190,7 @@ async function loadAgentReplyContext(ticketId: string) {
         .select("*")
         .eq("ticket_id", ticketId)
         .eq("author_type", "customer")
+        .eq("visibility", "public")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -196,6 +198,7 @@ async function loadAgentReplyContext(ticketId: string) {
         .from("messages")
         .select("*")
         .eq("ticket_id", ticketId)
+        .eq("visibility", "public")
         .not("email_subject", "is", null)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -209,7 +212,6 @@ export async function createAgentReply(
   ticketId: string,
   input: {
     body: string;
-    visibility?: "public" | "internal";
     channel?: "email" | "api" | "admin";
     email?: {
       cc?: string[];
@@ -222,10 +224,8 @@ export async function createAgentReply(
   auth: AuthContext,
 ) {
   const ticketRow = await loadMessageTicket(ticketId);
-  const visibility = input.visibility ?? "public";
   const channel = input.channel ?? (auth.type === "api_key" ? "api" : "admin");
-  const shouldSendEmail =
-    canSendEmail(ticketRow) && visibility === "public";
+  const shouldSendEmail = canSendEmail(ticketRow);
 
   let body = input.body;
   let emailTo: string[] = [];
@@ -258,7 +258,7 @@ export async function createAgentReply(
   const message = await insertMessage({
     ticketId,
     body,
-    visibility,
+    visibility: "public",
     authorType: "agent",
     authorId: auth.userId,
     channel,

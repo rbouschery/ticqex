@@ -24,7 +24,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, apiFetchText } from "@/lib/api-client";
-import { EmailConversationPanel } from "./email-conversation-panel";
+import { useTicketRealtime } from "@/hooks/use-board-realtime";
+import {
+  EmailConversationPanel,
+  type EmailThreadOrder,
+} from "./email-conversation-panel";
 import { TaskTicketPanel } from "./task-ticket-panel";
 import type {
   EmailComposePayload,
@@ -57,7 +61,6 @@ export function TicketModal({
 }) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [users, setUsers] = useState<StaffUser[]>([]);
-  const [internal, setInternal] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [assigneeId, setAssigneeId] = useState<string>("");
@@ -65,15 +68,20 @@ export function TicketModal({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [threadOrder, setThreadOrder] = useState<EmailThreadOrder>("oldest_first");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
-      const [t, staff] = await Promise.all([
+      const [t, staff, settings] = await Promise.all([
         apiFetch<TicketDetail>(`/api/v1/tickets/${ticketId}`),
         apiFetch<StaffUser[]>("/api/v1/users"),
+        apiFetch<{ email_thread_order?: EmailThreadOrder }>("/api/v1/settings"),
       ]);
+      setThreadOrder(settings.email_thread_order ?? "oldest_first");
       setTicket(t);
       setTitle(t.title);
       setBody(isTaskDetail(t) ? (t.body ?? "") : "");
@@ -81,7 +89,7 @@ export function TicketModal({
       setTagInput(t.tags.map((x) => x.name).join(", "));
       setUsers(staff);
 
-      if (isConversationDetail(t)) {
+      if (isConversationDetail(t) && !options?.silent) {
         await apiFetch(`/api/v1/tickets/${ticketId}/read`, { method: "POST" });
         setTicket((prev) =>
           prev && isConversationDetail(prev)
@@ -99,9 +107,17 @@ export function TicketModal({
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load ticket");
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, [ticketId, onBoardChange]);
+
+  const refreshTicket = useCallback(() => {
+    void load({ silent: true });
+  }, [load]);
+
+  useTicketRealtime(ticketId, refreshTicket);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load ticket on open
@@ -167,9 +183,8 @@ export function TicketModal({
     }
   }
 
-  async function copyContext(excludeInternal: boolean) {
-    const q = excludeInternal ? "?exclude_internal=true" : "";
-    const text = await apiFetchText(`/api/v1/tickets/${ticketId}/context${q}`);
+  async function copyContext() {
+    const text = await apiFetchText(`/api/v1/tickets/${ticketId}/context`);
     await navigator.clipboard.writeText(text);
   }
 
@@ -208,7 +223,7 @@ export function TicketModal({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => void copyContext(false)}
+              onClick={() => void copyContext()}
             >
               <CopyIcon />
               Copy context
@@ -309,8 +324,7 @@ export function TicketModal({
               <EmailConversationPanel
                 ticket={ticket}
                 ticketId={ticketId}
-                internal={internal}
-                onInternalChange={setInternal}
+                threadOrder={threadOrder}
                 onSubmit={sendEmailReply}
                 saving={saving}
                 onToggleMessageRead={(id) => void toggleMessageRead(id)}

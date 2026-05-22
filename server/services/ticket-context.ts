@@ -3,7 +3,7 @@ import { isTaskTicket, type TicketRow } from "@server/domain/ticket";
 import { loadCustomFieldsMap } from "@server/services/custom-fields";
 import { getTicketForContext } from "@server/services/tickets";
 
-export async function getTicketContext(id: string, excludeInternal = false) {
+export async function getTicketContext(id: string) {
   const ticket = await getTicketForContext(id);
   const db = createAdminClient();
 
@@ -40,12 +40,9 @@ export async function getTicketContext(id: string, excludeInternal = false) {
       lines.push("");
     }
   } else {
-    const visibleMessages = ticket.messages.filter(
-      (msg) => !(excludeInternal && msg.visibility === "internal"),
-    );
     const agentIds = [
       ...new Set(
-        visibleMessages
+        ticket.messages
           .filter((msg) => msg.author_type === "agent" && msg.author_id)
           .map((msg) => msg.author_id as string),
       ),
@@ -61,7 +58,7 @@ export async function getTicketContext(id: string, excludeInternal = false) {
       }
     }
 
-    for (const msg of visibleMessages) {
+    for (const msg of ticket.messages) {
       let authorName = "System";
       if (msg.author_type === "customer") {
         authorName =
@@ -77,11 +74,7 @@ export async function getTicketContext(id: string, excludeInternal = false) {
         .slice(0, 16)
         .replace("T", " ");
 
-      if (msg.visibility === "internal") {
-        lines.push(`[Internal note — ${authorName}, ${date}]:`);
-      } else {
-        lines.push(`**${authorName}** (${date}):`);
-      }
+      lines.push(`**${authorName}** (${date}):`);
       lines.push(String(msg.body));
       lines.push("");
     }

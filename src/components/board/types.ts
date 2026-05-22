@@ -99,8 +99,6 @@ export type AttachmentUpload = {
 
 export type EmailComposePayload = {
   body: string;
-  visibility: "public" | "internal";
-  channel: "admin" | "email";
   email?: {
     cc?: string[];
     subject?: string;

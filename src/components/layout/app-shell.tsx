@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { UserMenu } from "@/components/layout/user-menu";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 
 const nav = [
   { href: "/board", label: "Board" },
@@ -14,18 +14,10 @@ const nav = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-
-  async function signOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b border-border bg-card">
+    <div className="flex h-svh flex-col overflow-y-auto bg-background [scrollbar-gutter:stable]">
+      <header className="sticky top-0 z-10 shrink-0 border-b border-border bg-card">
         <div className="mx-auto flex h-14 max-w-[1600px] items-center justify-between px-4">
           <div className="flex items-center gap-6">
             <Link
@@ -52,12 +44,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ))}
             </nav>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => void signOut()}>
-            Sign out
-          </Button>
+          <UserMenu />
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
     </div>
   );
 }

@@ -15,9 +15,10 @@ gantt
     Phase 2 - Admin Kanban       :p2, after p1, 10d
     section Integrations
     Phase 3 - Email              :p3, after p2, 7d
-    Phase 4 - Realtime + Polish  :p4, after p3, 5d
+    Phase 4 - Live board         :p4, after p3, 3d
+    Phase 5 - UX polish          :p5, after p4, 5d
     section Release
-    Phase 5 - OSS Release        :p5, after p4, 5d
+    Phase 6 - OSS Release        :p6, after p5, 5d
 ```
 
 Timelines are estimates for a solo/small team. Phases are sequential — each depends on the previous.
@@ -165,19 +166,37 @@ See [INTEGRATIONS.md](./INTEGRATIONS.md) for full spec.
 
 ---
 
-## Phase 4 — Realtime + Polish
+## Phase 4 — Live board (Realtime)
 
-**Goal:** Live board updates and UX polish for daily use.
+**Goal:** Board stays in sync across tabs and when inbound email creates or updates tickets — no manual refresh.
 
 Depends on: **Phase 3**
 
 ### Deliverables
 
-- [ ] Supabase Realtime subscription in admin UI
-  - [ ] Ticket created/updated/moved → board updates live
-  - [ ] New message → ticket card preview updates
-- [ ] Optimistic UI for drag-and-drop (revert on API failure)
-- [ ] Loading states, empty states, error toasts
+- [x] `useBoardRealtime()` — Supabase `postgres_changes` on `tickets`, `messages`, and `message_reads`
+- [x] Debounced silent `loadBoard({ silent: true })` on change events
+- [x] Wired in `KanbanBoard` with cleanup on unmount; mutes self-echo after local DnD
+- [x] Optimistic drag-and-drop with revert + Alert on PATCH failure
+
+### Exit criteria
+
+- Two browser tabs: move ticket in one, other updates within ~1s
+- Inbound email → ticket appears in other tab without manual refresh
+- Mark read in one tab → unread badge clears in other tab
+- Failed drag shows visible error; board state reverts without skeleton flicker
+
+---
+
+## Phase 5 — UX polish & productivity
+
+**Goal:** Daily-use polish deferred from Phase 4 — search, shortcuts, scheduled jobs, and broader UX pass.
+
+Depends on: **Phase 4**
+
+### Deliverables
+
+- [ ] Loading states, empty states, error toasts (toast library TBD)
 - [ ] Keyboard shortcuts (optional: `n` new ticket, `/` search)
 - [ ] Ticket search (title + customer username, simple text match)
 - [ ] Trigger.dev: scheduled jobs setup
@@ -186,17 +205,17 @@ Depends on: **Phase 3**
 
 ### Exit criteria
 
-- Two browser tabs: move ticket in one, other updates within ~1s
-- No broken states on network failure
-- Email → board appears without manual refresh
+- Agent can find tickets quickly without scrolling entire board
+- No broken states on network failure beyond Phase 4 Alert
+- Optional scheduled digests run in Trigger.dev when configured
 
 ---
 
-## Phase 5 — Open Source Release
+## Phase 6 — Open Source Release
 
 **Goal:** Publish as MIT open-core project. Others can self-host.
 
-Depends on: **Phase 4**
+Depends on: **Phase 5**
 
 ### Deliverables
 
@@ -221,31 +240,31 @@ Depends on: **Phase 4**
 
 Not scheduled. Documented so v1 architecture doesn't block them.
 
-### Phase 6 — Docker self-host
+### Phase 7 — Docker self-host
 
 - Docker Compose: Next.js + Supabase (local stack) or standalone Postgres
 - One-command deploy for on-prem users
 
-### Phase 7 — Webhooks
+### Phase 8 — Webhooks
 
 - `webhook_endpoints` + `webhook_deliveries` tables
 - Events: `ticket.created`, `ticket.updated`, `message.received`, etc.
 - Trigger.dev delivery with retries + signing
 
-### Phase 8 — Multi-tenant / Ticqex Cloud
+### Phase 9 — Multi-tenant / Ticqex Cloud
 
 - `workspace_id` on all entities
 - Workspace management UI
 - Hosted offering with billing
 - Enterprise features in `/enterprise`
 
-### Phase 9 — Customer portal
+### Phase 10 — Customer portal
 
 - Public-facing ticket status page
 - Customer auth (magic link?)
 - Uses same API
 
-### Phase 10 — Enterprise features
+### Phase 11 — Enterprise features
 
 - Audit log
 - SLAs, priorities, due dates
@@ -262,13 +281,14 @@ Phase 0 (Foundation)
   └── Phase 1 (Core API)
         └── Phase 2 (Admin GUI)
               └── Phase 3 (Email)
-                    └── Phase 4 (Realtime + Polish)
-                          └── Phase 5 (OSS Release)
-                                ├── Phase 6 (Docker)
-                                ├── Phase 7 (Webhooks)
-                                ├── Phase 8 (Multi-tenant)
-                                ├── Phase 9 (Customer portal)
-                                └── Phase 10 (Enterprise)
+                    └── Phase 4 (Live board)
+                          └── Phase 5 (UX polish)
+                                └── Phase 6 (OSS Release)
+                                      ├── Phase 7 (Docker)
+                                      ├── Phase 8 (Webhooks)
+                                      ├── Phase 9 (Multi-tenant)
+                                      ├── Phase 10 (Customer portal)
+                                      └── Phase 11 (Enterprise)
 ```
 
 ## Risk register
@@ -276,7 +296,7 @@ Phase 0 (Foundation)
 | Risk | Mitigation |
 |------|------------|
 | Email threading edge cases | Message-ID first; log unmatched emails for manual review |
-| Custom field query performance | Index `custom_field_values(field_id, value_text)`; optimize in Phase 4 if needed |
+| Custom field query performance | Index `custom_field_values(field_id, value_text)`; optimize in Phase 5 if needed |
 | Realtime + API-only writes | Realtime is read-only push; mutations always via API |
 | Scope creep into enterprise features | `/enterprise` boundary + PHASES doc keeps v1 focused |
-| Supabase vendor lock-in | Accepted decision; revisit if self-host demand is high (Phase 6) |
+| Supabase vendor lock-in | Accepted decision; revisit if self-host demand is high (Phase 7) |

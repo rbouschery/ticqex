@@ -45,7 +45,7 @@ function HtmlEmailBody({ html }: { html: string }) {
   const resize = useCallback(() => {
     const doc = iframeRef.current?.contentDocument;
     if (!doc?.body) return;
-    setHeight(Math.max(80, doc.body.scrollHeight + 16));
+    setHeight(Math.max(80, doc.body.scrollHeight));
   }, []);
 
   useEffect(() => {
@@ -53,7 +53,8 @@ function HtmlEmailBody({ html }: { html: string }) {
   }, [html, resize]);
 
   const srcDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><base target="_blank"><style>
-    body { margin: 0; padding: 0; font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: #27272a; word-break: break-word; }
+    html, body { box-sizing: border-box; margin: 0; padding: 0; background: #ffffff; }
+    body { padding: 12px; font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: #27272a; word-break: break-word; overflow: hidden; }
     img { max-width: 100%; height: auto; }
     a { color: #4f46e5; }
     blockquote { margin: 0.5em 0; padding-left: 0.75em; border-left: 3px solid #d4d4d8; color: #52525b; }
@@ -64,9 +65,10 @@ function HtmlEmailBody({ html }: { html: string }) {
       ref={iframeRef}
       title="Email content"
       sandbox=""
+      scrolling="no"
       srcDoc={srcDoc}
       onLoad={resize}
-      className="w-full rounded-lg border border-border bg-background"
+      className="relative z-0 block w-full overflow-hidden rounded-lg border border-border bg-background"
       style={{ height, minHeight: 80 }}
     />
   );
@@ -88,14 +90,7 @@ export function EmailMessageBody({
   return (
     <div onClick={(e) => e.stopPropagation()}>
       {hasHtml ? (
-        <div className="space-y-2">
-          <HtmlEmailBody html={message.email_body_html!} />
-          {message.body.trim() && message.body !== message.email_body_html && (
-            <p className={cn("text-xs text-muted-foreground", textClass)}>
-              {message.body}
-            </p>
-          )}
-        </div>
+        <HtmlEmailBody html={message.email_body_html!} />
       ) : (
         <p className={textClass}>{message.body}</p>
       )}

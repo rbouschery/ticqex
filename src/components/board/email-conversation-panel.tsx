@@ -1,7 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useEffect, useMemo, useRef } from "react";
+import { EnvelopeIcon, EnvelopeOpenIcon } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { EmailCompose } from "./email-compose";
 import { EmailMessageBody } from "./email-message-body";
@@ -11,25 +17,51 @@ import type {
   EmailComposePayload,
   MessageRow,
 } from "./types";
-import { isEmailMessage } from "./email-utils";
+import { isEmailMessage, messageSenderEmail } from "./email-utils";
+
+export type EmailThreadOrder = "oldest_first" | "newest_first";
+
+function scrollToLatest(el: HTMLElement, order: EmailThreadOrder) {
+  if (order === "newest_first") {
+    el.scrollTop = 0;
+  } else {
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+function isNearLatest(el: HTMLElement, order: EmailThreadOrder) {
+  const threshold = 96;
+  if (order === "newest_first") {
+    return el.scrollTop < threshold;
+  }
+  return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+}
 
 export function EmailConversationPanel({
   ticket,
   ticketId,
-  internal,
-  onInternalChange,
+  threadOrder,
   onSubmit,
   saving,
   onToggleMessageRead,
 }: {
   ticket: ConversationTicketDetail;
   ticketId: string;
-  internal: boolean;
-  onInternalChange: (value: boolean) => void;
+  threadOrder: EmailThreadOrder;
   onSubmit: (payload: EmailComposePayload) => Promise<void>;
   saving: boolean;
   onToggleMessageRead: (messageId: string) => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const messageCountRef = useRef(0);
+
+  const messages = useMemo(() => {
+    if (threadOrder === "newest_first") {
+      return [...ticket.messages].reverse();
+    }
+    return ticket.messages;
+  }, [ticket.messages, threadOrder]);
+
   const lastEmailMessage = useMemo((): MessageRow | null => {
     if (!ticket.messages.length) return null;
     for (let i = ticket.messages.length - 1; i >= 0; i--) {
@@ -42,11 +74,30 @@ export function EmailConversationPanel({
   const customerEmail =
     ticket.contact_address ?? ticket.customer?.username ?? "";
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || messages.length === 0) return;
+
+    const countChanged = messages.length !== messageCountRef.current;
+    messageCountRef.current = messages.length;
+
+    if (!countChanged && !isNearLatest(el, threadOrder)) return;
+
+    const scroll = () => scrollToLatest(el, threadOrder);
+    scroll();
+    const timer = window.setTimeout(scroll, 100);
+
+    return () => window.clearTimeout(timer);
+  }, [messages, threadOrder]);
+
   return (
-    <>
-      <ScrollArea className="min-h-0 flex-1">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+      >
         <div className="space-y-3 p-4">
-          {ticket.messages.map((msg) => {
+          {messages.map((msg) => {
             const isIncoming = msg.author_type === "customer";
             const isOutbound = !isIncoming;
             const isUnread = isIncoming && msg.read === false;
@@ -54,55 +105,53 @@ export function EmailConversationPanel({
             return (
               <div
                 key={msg.id}
-                role={isIncoming ? "button" : undefined}
-                tabIndex={isIncoming ? 0 : undefined}
-                onClick={
-                  isIncoming ? () => onToggleMessageRead(msg.id) : undefined
-                }
-                onKeyDown={
-                  isIncoming
-                    ? (e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          onToggleMessageRead(msg.id);
-                        }
-                      }
-                    : undefined
-                }
                 className={cn(
-                  "rounded-lg p-3 text-sm ring-1 ring-foreground/5",
-                  msg.visibility === "internal" &&
-                    "border border-amber-500/30 bg-amber-500/10",
-                  msg.visibility !== "internal" &&
-                    isUnread &&
-                    "border border-primary/30 bg-primary/5",
-                  msg.visibility !== "internal" &&
-                    !isUnread &&
-                    "bg-muted/50",
-                  isIncoming &&
-                    "cursor-pointer hover:ring-primary/30 hover:ring-2",
+                  "relative isolate overflow-hidden rounded-lg border border-transparent p-3 text-sm ring-1 ring-foreground/5",
+                  isUnread && "border-primary/30 bg-primary/5",
+                  !isUnread && "bg-muted/50",
                 )}
               >
-                <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    {isIncoming && (
-                      <span
+                {isIncoming && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
                         className={cn(
-                          "inline-block size-2 shrink-0 rounded-full",
-                          isUnread ? "bg-primary" : "bg-muted-foreground/40",
+                          "absolute top-2 right-2 text-muted-foreground",
+                          isUnread && "text-primary",
                         )}
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span>
-                      {msg.author_type}
-                      {isIncoming && (isUnread ? " · unread" : " · read")}
-                    </span>
-                  </span>
-                  <time dateTime={msg.created_at}>
+                        aria-label={
+                          isUnread ? "Mark as read" : "Mark as unread"
+                        }
+                        onClick={() => onToggleMessageRead(msg.id)}
+                      >
+                        {isUnread ? (
+                          <EnvelopeOpenIcon weight="fill" />
+                        ) : (
+                          <EnvelopeIcon />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">
+                      {isUnread ? "Mark as read" : "Mark as unread"}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
+                <div className="mb-2 flex items-start gap-2 pr-8">
+                  <time
+                    dateTime={msg.created_at}
+                    className="shrink-0 text-xs tabular-nums text-muted-foreground"
+                  >
                     {new Date(msg.created_at).toLocaleString()}
                   </time>
                 </div>
+
+                <p className="mb-2 truncate text-sm font-medium text-foreground">
+                  {messageSenderEmail(msg, ticket)}
+                </p>
 
                 <EmailMessageHeader message={msg} isOutbound={isOutbound} />
                 <EmailMessageBody message={msg} emphasize={isUnread} />
@@ -110,20 +159,20 @@ export function EmailConversationPanel({
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
 
       {ticket.channel === "email" && (
-        <EmailCompose
-          ticketId={ticketId}
-          customerEmail={customerEmail}
-          ticketTitle={ticket.title}
-          lastEmailMessage={lastEmailMessage}
-          internal={internal}
-          onInternalChange={onInternalChange}
-          onSubmit={onSubmit}
-          saving={saving}
-        />
+        <div className="relative z-10 shrink-0 border-t border-border bg-background">
+          <EmailCompose
+            ticketId={ticketId}
+            customerEmail={customerEmail}
+            ticketTitle={ticket.title}
+            lastEmailMessage={lastEmailMessage}
+            onSubmit={onSubmit}
+            saving={saving}
+          />
+        </div>
       )}
-    </>
+    </div>
   );
 }

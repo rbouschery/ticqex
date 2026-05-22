@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiKeyForm, RevokeButton } from "@/components/settings/api-key-form";
 import { CustomFieldForm } from "@/components/settings/custom-field-form";
+import { EmailThreadOrderSetting } from "@/components/settings/email-thread-order-setting";
 import { EmailSignatureForm } from "@/components/settings/email-signature-form";
 import { EmailSnippetsSection } from "@/components/settings/email-snippets-section";
 import { InboundEmailStatusSetting } from "@/components/settings/inbound-email-status-setting";
@@ -43,6 +44,41 @@ type ApiKey = {
   created_at: string;
 };
 type Me = { role: string };
+
+/** Admin settings cards — keep skeleton count in sync with rendered sections below. */
+const ADMIN_SETTINGS_SECTIONS = [
+  { key: "appearance" },
+  { key: "board-columns" },
+  { key: "inbound-email" },
+  { key: "tags" },
+  { key: "custom-fields" },
+  { key: "email-thread-order" },
+  { key: "email-signature" },
+  { key: "email-snippets" },
+  { key: "api-keys" },
+] as const;
+
+function SettingsLoadingSkeleton() {
+  return (
+    <div className="mx-auto max-w-3xl space-y-6 p-6">
+      <div className="space-y-2">
+        <Skeleton className="h-7 w-32" />
+        <Skeleton className="h-4 w-72" />
+      </div>
+      {ADMIN_SETTINGS_SECTIONS.map(({ key }) => (
+        <Card key={key}>
+          <CardHeader>
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-24 w-full" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 export function SettingsPanel() {
   const [me, setMe] = useState<Me | null>(null);
@@ -79,13 +115,7 @@ export function SettingsPanel() {
   }, [load]);
 
   if (!me) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-4 p-6">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    );
+    return <SettingsLoadingSkeleton />;
   }
 
   if (me.role !== "admin") {
@@ -123,6 +153,8 @@ export function SettingsPanel() {
       )}
 
       <ThemeSetting />
+
+      <EmailThreadOrderSetting />
 
       <Card>
         <CardHeader>
