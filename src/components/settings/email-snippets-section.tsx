@@ -1,26 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api-client";
-
-type EmailSnippet = { id: string; title: string; body: string };
+import { useEmailSnippets } from "@/hooks/use-email-snippets";
 
 export function EmailSnippetsSection() {
-  const [snippets, setSnippets] = useState<EmailSnippet[]>([]);
+  const { snippets, reload } = useEmailSnippets();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-
-  const loadSnippets = useCallback(async () => {
-    const data = await apiFetch<EmailSnippet[]>("/api/v1/email-snippets");
-    setSnippets(data);
-  }, []);
-
-  useEffect(() => {
-    void loadSnippets();
-  }, [loadSnippets]);
 
   return (
     <div className="space-y-4">
@@ -45,7 +35,7 @@ export function EmailSnippetsSection() {
                 await apiFetch(`/api/v1/email-snippets/${snippet.id}`, {
                   method: "DELETE",
                 });
-                await loadSnippets();
+                await reload();
               }}
             >
               Delete
@@ -66,7 +56,7 @@ export function EmailSnippetsSection() {
           });
           setTitle("");
           setBody("");
-          await loadSnippets();
+          await reload();
         }}
       >
         <Input

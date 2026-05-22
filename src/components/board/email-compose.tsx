@@ -3,7 +3,6 @@
 import {
   FormEvent,
   useCallback,
-  useEffect,
   useRef,
   useState,
 } from "react";
@@ -21,13 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { apiFetch } from "@/lib/api-client";
+import { useEmailSnippets } from "@/hooks/use-email-snippets";
 import { uploadAttachment } from "./attachment-upload";
 import { CcChipInput } from "./cc-chip-input";
 import type {
   AttachmentUpload,
   EmailComposePayload,
-  EmailSnippet,
   MessageRow,
 } from "./types";
 import { formatBytes, formatReplySubject } from "./email-utils";
@@ -56,15 +54,9 @@ export function EmailCompose({
   const [includeQuote, setIncludeQuote] = useState(true);
   const [attachments, setAttachments] = useState<AttachmentUpload[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [snippets, setSnippets] = useState<EmailSnippet[]>([]);
+  const { snippets } = useEmailSnippets();
   const [snippetId, setSnippetId] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    apiFetch<EmailSnippet[]>("/api/v1/email-snippets")
-      .then(setSnippets)
-      .catch(() => setSnippets([]));
-  }, []);
 
   const resetEmailFields = useCallback(() => {
     setCc([]);

@@ -57,13 +57,14 @@ export type BoardTicketRow = {
   customer_id: string | null;
   assignee_id: string | null;
   body: string | null;
+  created_at: string;
   updated_at: string;
   customers: { id: string; username: string } | null;
   users: { id: string; username: string } | null;
 };
 
 export const BOARD_TICKET_SELECT =
-  "id, title, kind, channel, origin, customer_id, assignee_id, body, updated_at, customers(id, username), users:assignee_id(id, username)";
+  "id, title, kind, channel, origin, customer_id, assignee_id, body, created_at, updated_at, customers(id, username), users:assignee_id(id, username)";
 
 export type TicketRow = {
   id: string;
@@ -72,6 +73,7 @@ export type TicketRow = {
   channel: string | null;
   contact_address: string | null;
   customer_id: string | null;
+  status_id: string;
   title: string;
   origin?: string;
 };
@@ -98,7 +100,9 @@ export async function loadTicketRow(id: string): Promise<TicketRow> {
   const db = createAdminClient();
   const { data, error } = await db
     .from("tickets")
-    .select("id, kind, body, channel, contact_address, customer_id, title, origin")
+    .select(
+      "id, kind, body, channel, contact_address, customer_id, status_id, title, origin",
+    )
     .eq("id", id)
     .single();
   if (error || !data) throw ApiError.notFound("Ticket not found");

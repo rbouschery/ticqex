@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -9,24 +8,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiFetch } from "@/lib/api-client";
-
-type Me = {
-  username: string;
-  email: string;
-  role: string;
-};
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export function AccountPanel() {
-  const [me, setMe] = useState<Me | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    apiFetch<Me>("/api/v1/users/me")
-      .then(setMe)
-      .catch(() => setMe(null))
-      .finally(() => setLoading(false));
-  }, []);
+  const { user, loading } = useCurrentUser();
 
   if (loading) {
     return (
@@ -47,19 +32,19 @@ export function AccountPanel() {
             Account settings are coming soon. This page is a placeholder for now.
           </CardDescription>
         </CardHeader>
-        {me && (
+        {user && (
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Name</span>
-              <span className="font-medium">{me.username}</span>
+              <span className="font-medium">{user.username}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Email</span>
-              <span className="font-medium">{me.email}</span>
+              <span className="font-medium">{user.email}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Role</span>
-              <span className="font-medium capitalize">{me.role}</span>
+              <span className="font-medium capitalize">{user.role}</span>
             </div>
           </CardContent>
         )}

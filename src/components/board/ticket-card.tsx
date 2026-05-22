@@ -1,6 +1,6 @@
 "use client";
 
-import { useDraggable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Avatar, AvatarFallback, AvatarGroup } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -8,47 +8,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { BoardTicket } from "./types";
 
-export function TicketCard({
+function TicketCardContent({
   ticket,
-  onClick,
-  dragOverlay = false,
+  sortable,
 }: {
   ticket: BoardTicket;
-  onClick: () => void;
-  dragOverlay?: boolean;
+  sortable: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: ticket.id });
-
-  const style = transform
-    ? {
-        transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.4 : 1,
-      }
-    : undefined;
-
   const customEntries = Object.entries(ticket.custom_fields).slice(0, 2);
 
   return (
-    <div
-      ref={dragOverlay ? undefined : setNodeRef}
-      style={style}
-      {...(dragOverlay ? {} : { ...attributes, ...listeners })}
-      onClick={onClick}
-      className={cn("relative", dragOverlay && "shadow-lg")}
-    >
-      {ticket.unread_count > 0 && (
-        <Badge
-          className="absolute -right-1.5 -top-1.5 z-10 h-5 min-w-5 justify-center border-2 border-card bg-red-600 px-1 text-[10px] font-bold text-white hover:bg-red-600"
-          aria-label={`${ticket.unread_count} unread messages`}
-        >
-          {ticket.unread_count > 99 ? "99+" : ticket.unread_count}
-        </Badge>
-      )}
-      <Card
-        size="sm"
-        className="cursor-pointer py-0 transition-colors hover:ring-ring/50 hover:ring-2"
-      >
+    <Card size="sm" className={cn("py-0", sortable && "pointer-events-none")}>
       <CardContent className="space-y-2 py-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-sm font-medium text-foreground">{ticket.title}</h3>
@@ -102,7 +72,63 @@ export function TicketCard({
           </div>
         </div>
       </CardContent>
-      </Card>
+    </Card>
+  );
+}
+
+export function TicketCard({
+  ticket,
+  onClick,
+  dragOverlay = false,
+  sortable = false,
+}: {
+  ticket: BoardTicket;
+  onClick: () => void;
+  dragOverlay?: boolean;
+  sortable?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: ticket.id,
+    disabled: dragOverlay || !sortable,
+  });
+
+  const style = transform
+    ? {
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }
+    : undefined;
+
+  return (
+    <div
+      ref={dragOverlay ? undefined : setNodeRef}
+      style={style}
+      {...(dragOverlay || !sortable ? {} : { ...attributes, ...listeners })}
+      onClick={!dragOverlay ? onClick : undefined}
+      className={cn(
+        "relative rounded-xl outline-none focus:outline-none focus-visible:outline-none",
+        sortable && !dragOverlay && "cursor-grab touch-none active:cursor-grabbing",
+        !sortable && !dragOverlay && "cursor-pointer",
+        isDragging && !dragOverlay && "opacity-40",
+        dragOverlay && "shadow-lg",
+      )}
+    >
+      {ticket.unread_count > 0 && (
+        <Badge
+          className="absolute -right-1.5 -top-1.5 z-10 h-5 min-w-5 justify-center border-2 border-card bg-red-600 px-1 text-[10px] font-bold text-white hover:bg-red-600"
+          aria-label={`${ticket.unread_count} unread messages`}
+        >
+          {ticket.unread_count > 99 ? "99+" : ticket.unread_count}
+        </Badge>
+      )}
+      <TicketCardContent ticket={ticket} sortable={sortable && !dragOverlay} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { PaperclipIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { MessageAttachment, MessageRow } from "./types";
@@ -47,10 +47,6 @@ function HtmlEmailBody({ html }: { html: string }) {
     if (!doc?.body) return;
     setHeight(Math.max(80, doc.body.scrollHeight));
   }, []);
-
-  useEffect(() => {
-    resize();
-  }, [html, resize]);
 
   const srcDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><base target="_blank"><style>
     html, body { box-sizing: border-box; margin: 0; padding: 0; background: #ffffff; }

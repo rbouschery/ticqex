@@ -22,6 +22,8 @@ import {
   enrichTicketMessages,
   formatMessageRow,
 } from "@server/services/messages";
+import { syncTicketLaneOrderOnStatusChange } from "@server/services/board-lane-orders";
+import { touchTicket } from "@server/services/ticket-touch";
 import type { AuthContext } from "@server/middleware/auth";
 import type { createTicketSchema } from "@server/lib/validation/schemas";
 import type { z } from "zod";
@@ -267,6 +269,7 @@ export async function updateTicket(
     tags?: string[];
     custom_fields?: Record<string, unknown>;
   },
+  options?: { userId?: string; boardMoveHandled?: boolean },
 ) {
   const ticket = await loadTicketRow(id);
 
@@ -274,20 +277,52 @@ export async function updateTicket(
     throw ApiError.badRequest("Only task tickets have a body field");
   }
 
+  const previousStatusId = ticket.status_id;
   const db = createAdminClient();
+
   const patch: Record<string, unknown> = {};
   if (input.title !== undefined) patch.title = input.title;
   if (input.body !== undefined) patch.body = input.body;
   if (input.status_id !== undefined) patch.status_id = input.status_id;
   if (input.assignee_id !== undefined) patch.assignee_id = input.assignee_id;
 
-  if (Object.keys(patch).length) {
+  const hasScalarPatch = Object.keys(patch).length > 0;
+  const hasTagsPatch = input.tags !== undefined;
+  const hasCustomFieldsPatch =
+    input.custom_fields !== undefined &&
+    Object.keys(input.custom_fields).length > 0;
+
+  if (hasScalarPatch) {
     const { error } = await db.from("tickets").update(patch).eq("id", id);
     if (error) throw ApiError.internal(error.message);
   }
 
   if (input.tags) await setTicketTags(id, input.tags);
-  await setCustomFields(db, "ticket", id, input.custom_fields);
+  if (input.custom_fields !== undefined) {
+    await setCustomFields(db, "ticket", id, input.custom_fields);
+  }
+
+  if (
+    !hasScalarPatch &&
+    (hasTagsPatch || hasCustomFieldsPatch)
+  ) {
+    await touchTicket(id);
+  }
+
+  if (
+    options?.userId &&
+    !options.boardMoveHandled &&
+    input.status_id !== undefined &&
+    previousStatusId &&
+    previousStatusId !== input.status_id
+  ) {
+    await syncTicketLaneOrderOnStatusChange(
+      options.userId,
+      id,
+      previousStatusId,
+      input.status_id,
+    );
+  }
 
   return getTicket(id);
 }

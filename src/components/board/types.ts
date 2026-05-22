@@ -19,6 +19,7 @@ export type BoardTicket = {
   assignee: { username: string; initials: string } | null;
   custom_fields: Record<string, unknown>;
   tags: { id: string; name: string; color: string }[];
+  created_at: string;
   updated_at: string;
   unread_count: number;
 };

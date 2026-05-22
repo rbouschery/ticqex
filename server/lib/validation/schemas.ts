@@ -91,6 +91,46 @@ export const reorderStatusesSchema = z.object({
   ids: z.array(z.string().uuid()).min(1),
 });
 
+export const boardLaneOrderSchema = z.object({
+  ticket_ids: z.array(z.string().uuid()),
+  visible_ticket_ids: z.array(z.string().uuid()).optional(),
+  removed_ticket_ids: z.array(z.string().uuid()).optional(),
+});
+
+export const seedManualLaneOrdersSchema = z.object({
+  lanes: z.record(z.string().uuid(), z.array(z.string().uuid())),
+  only_if_empty: z.boolean().optional(),
+  merge_visible: z.boolean().optional(),
+});
+
+const boardMoveFilterContextSchema = z.object({
+  source_visible_ticket_ids: z.array(z.string().uuid()).optional(),
+  target_visible_ticket_ids: z.array(z.string().uuid()).optional(),
+  removed_ticket_ids: z.array(z.string().uuid()).optional(),
+});
+
+export const boardMoveTicketSchema = z
+  .object({
+    ticket_id: z.string().uuid(),
+    from_status_id: z.string().uuid(),
+    to_status_id: z.string().uuid(),
+    target_ticket_ids: z.array(z.string().uuid()),
+    source_ticket_ids: z.array(z.string().uuid()).optional(),
+    filter_context: boardMoveFilterContextSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.from_status_id !== data.to_status_id &&
+      data.source_ticket_ids === undefined
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "source_ticket_ids is required when moving across lanes",
+        path: ["source_ticket_ids"],
+      });
+    }
+  });
+
 export const createTagSchema = z.object({
   name: z.string().min(1),
   color: z.string().optional(),

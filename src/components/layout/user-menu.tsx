@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SignOutIcon, UserIcon } from "@phosphor-icons/react";
@@ -14,13 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiFetch } from "@/lib/api-client";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { createClient } from "@/lib/supabase/client";
-
-type Me = {
-  username: string;
-  email: string;
-};
 
 function initials(name: string): string {
   const parts = name.trim().split(/[\s@._-]+/).filter(Boolean);
@@ -31,13 +25,7 @@ function initials(name: string): string {
 
 export function UserMenu() {
   const router = useRouter();
-  const [me, setMe] = useState<Me | null>(null);
-
-  useEffect(() => {
-    apiFetch<Me>("/api/v1/users/me")
-      .then(setMe)
-      .catch(() => setMe(null));
-  }, []);
+  const { user, loading } = useCurrentUser();
 
   async function signOut() {
     const supabase = createClient();
@@ -46,7 +34,7 @@ export function UserMenu() {
     router.refresh();
   }
 
-  if (!me) {
+  if (loading || !user) {
     return <Skeleton className="size-8 rounded-full" />;
   }
 
@@ -60,7 +48,7 @@ export function UserMenu() {
           aria-label="Account menu"
         >
           <Avatar size="sm">
-            <AvatarFallback>{initials(me.username)}</AvatarFallback>
+            <AvatarFallback>{initials(user.username)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>

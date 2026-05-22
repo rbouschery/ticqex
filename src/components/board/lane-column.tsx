@@ -1,35 +1,29 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { TicketCard } from "./ticket-card";
 import type { BoardLane } from "./types";
 
 export function LaneColumn({
   lane,
   filterActive = false,
+  sortable = false,
   onTicketClick,
 }: {
   lane: BoardLane;
   filterActive?: boolean;
+  sortable?: boolean;
   onTicketClick: (id: string) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: lane.status.id });
+  const { setNodeRef } = useDroppable({ id: lane.status.id });
 
   return (
-    <section
-      ref={setNodeRef}
-      className={cn(
-        "flex h-full min-h-0 w-72 shrink-0 flex-col overflow-hidden rounded-xl bg-muted/50 ring-1 ring-inset ring-foreground/5",
-        isOver && "ring-2 ring-inset",
-      )}
-      style={
-        isOver
-          ? ({ "--tw-ring-color": lane.status.color } as React.CSSProperties)
-          : undefined
-      }
-    >
+    <section className="flex h-full min-h-0 w-72 shrink-0 flex-col overflow-hidden rounded-xl bg-muted/50 ring-1 ring-inset ring-foreground/5">
       <div
         className="h-[3px] shrink-0 rounded-t-xl"
         style={{ backgroundColor: lane.status.color }}
@@ -47,14 +41,37 @@ export function LaneColumn({
             : lane.tickets.length}
         </Badge>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-2 pt-2.5">
-        {lane.tickets.map((ticket) => (
-          <TicketCard
-            key={ticket.id}
-            ticket={ticket}
-            onClick={() => onTicketClick(ticket.id)}
-          />
-        ))}
+      <div
+        ref={setNodeRef}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2.5 pb-2 pt-2.5"
+      >
+        {sortable ? (
+          <SortableContext
+            items={lane.tickets.map((ticket) => ticket.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="flex flex-col gap-2">
+              {lane.tickets.map((ticket) => (
+                <TicketCard
+                  key={ticket.id}
+                  ticket={ticket}
+                  sortable
+                  onClick={() => onTicketClick(ticket.id)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {lane.tickets.map((ticket) => (
+              <TicketCard
+                key={ticket.id}
+                ticket={ticket}
+                onClick={() => onTicketClick(ticket.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

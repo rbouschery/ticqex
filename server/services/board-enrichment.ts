@@ -63,6 +63,7 @@ export async function enrichTicketsForBoard(
       : null,
     custom_fields: fieldsMap.get(t.id) ?? {},
     tags: tagsMap.get(t.id) ?? [],
+    created_at: t.created_at,
     updated_at: t.updated_at,
     unread_count: unreadCounts.get(t.id) ?? 0,
   }));

@@ -10,6 +10,7 @@ import {
 import { linkUploadsToMessage } from "@server/services/attachment-uploads";
 import { prepareAgentOutboundReply } from "@server/services/outbound-replies";
 import { loadReadMessageIds } from "@server/services/message-reads";
+import { touchTicket } from "@server/services/ticket-touch";
 import type { AuthContext } from "@server/middleware/auth";
 import type { MessageDbRow } from "@/types/database";
 
@@ -173,10 +174,7 @@ async function insertMessage(input: InsertMessageInput): Promise<MessageDbRow> {
 
   if (error) throw ApiError.internal(error.message);
 
-  await db
-    .from("tickets")
-    .update({ updated_at: new Date().toISOString() })
-    .eq("id", input.ticketId);
+  await touchTicket(input.ticketId);
 
   return message;
 }

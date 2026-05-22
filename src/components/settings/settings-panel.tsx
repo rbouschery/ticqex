@@ -22,6 +22,7 @@ import { StatusColumnsSection } from "@/components/settings/status-columns-secti
 import { TagForm } from "@/components/settings/tag-form";
 import { ThemeSetting } from "@/components/settings/theme-setting";
 import { apiFetch } from "@/lib/api-client";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 type Tag = { id: string; name: string; color: string };
 type CustomField = {
@@ -43,7 +44,6 @@ type ApiKey = {
   key_prefix: string;
   created_at: string;
 };
-type Me = { role: string };
 
 /** Admin settings cards — keep skeleton count in sync with rendered sections below. */
 const ADMIN_SETTINGS_SECTIONS = [
@@ -81,7 +81,7 @@ function SettingsLoadingSkeleton() {
 }
 
 export function SettingsPanel() {
-  const [me, setMe] = useState<Me | null>(null);
+  const { user: me, loading: userLoading } = useCurrentUser();
   const [tags, setTags] = useState<Tag[]>([]);
   const [fields, setFields] = useState<CustomField[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -90,9 +90,8 @@ export function SettingsPanel() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (!me || me.role !== "admin") return;
     try {
-      const user = await apiFetch<Me>("/api/v1/users/me");
-      setMe(user);
       const [t, f, g] = await Promise.all([
         apiFetch<Tag[]>("/api/v1/tags"),
         apiFetch<CustomField[]>("/api/v1/custom-fields"),
@@ -101,20 +100,19 @@ export function SettingsPanel() {
       setTags(t);
       setFields(f);
       setSettings(g);
-      if (user.role === "admin") {
-        setApiKeys(await apiFetch<ApiKey[]>("/api/v1/api-keys"));
-      }
+      setApiKeys(await apiFetch<ApiKey[]>("/api/v1/api-keys"));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load settings");
     }
-  }, []);
+  }, [me]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load settings on mount
+    if (!me || me.role !== "admin") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load admin settings on mount
     void load();
-  }, [load]);
+  }, [me, load]);
 
-  if (!me) {
+  if (userLoading || !me) {
     return <SettingsLoadingSkeleton />;
   }
 
@@ -236,7 +234,7 @@ export function SettingsPanel() {
         </Card>
       )}
 
-      {me?.role === "admin" && (
+      {me.role === "admin" && (
         <Card>
           <CardHeader>
             <CardTitle>Email snippets</CardTitle>

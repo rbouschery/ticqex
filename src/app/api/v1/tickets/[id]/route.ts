@@ -14,10 +14,10 @@ export async function GET(request: NextRequest, { params }: Params) {
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
-  return withAuth(request, async () => {
+  return withAuth(request, async (auth) => {
     const { id } = await params;
     const body = parseBody(updateTicketSchema, await parseJsonBody(request));
-    return jsonData(await updateTicket(id, body));
+    return jsonData(await updateTicket(id, body, { userId: auth.userId }));
   });
 }
 
