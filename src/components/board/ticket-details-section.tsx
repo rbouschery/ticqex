@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePersistedExpanded } from "@/hooks/use-persisted-expanded";
 
 const UNASSIGNED = "__unassigned__";
-const STORAGE_PREFIX = "ticqex.ticket-details.expanded.v1";
+const STORAGE_PREFIX = "ticqex.ticket-details.expanded.v2";
 
 export function TicketDetailsSection({
   assigneeId,
@@ -45,7 +45,7 @@ export function TicketDetailsSection({
   body?: string;
   onBodyChange?: (value: string) => void;
 }) {
-  const { expanded, toggleExpanded, hydrated } = usePersistedExpanded(
+  const { expanded, toggleExpanded } = usePersistedExpanded(
     STORAGE_PREFIX,
     true,
   );
@@ -71,7 +71,7 @@ export function TicketDetailsSection({
         )}
       </button>
 
-      {hydrated && expanded && (
+      {expanded && (
         <div className="space-y-3 p-4">
           <div className="space-y-2">
             <Label>Assignee</Label>
