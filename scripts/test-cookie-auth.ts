@@ -10,9 +10,9 @@ const BASE = "http://127.0.0.1:3000";
 
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
-  const authClient = createClient(url, anonKey, {
+  const authClient = createClient(url, publishableKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const { data, error } = await authClient.auth.signInWithPassword({
@@ -22,7 +22,7 @@ async function main() {
   if (error || !data.session) throw new Error(error?.message ?? "no session");
 
   const cookieStore = new Map<string, string>();
-  const supabase = createServerClient(url, anonKey, {
+  const supabase = createServerClient(url, publishableKey, {
     cookies: {
       getAll() {
         return [...cookieStore.entries()].map(([name, value]) => ({ name, value }));

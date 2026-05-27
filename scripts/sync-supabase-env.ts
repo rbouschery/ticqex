@@ -3,7 +3,6 @@
  * Run after `pnpm db:start` (requires a running local stack).
  */
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
 import path from "node:path";
 import {
   readOrCreateEnvFile,
@@ -16,14 +15,14 @@ const SUPABASE_BIN = path.join(ROOT, "node_modules", ".bin", "supabase");
 
 type SupabaseStatus = {
   API_URL: string;
-  ANON_KEY: string;
-  SERVICE_ROLE_KEY: string;
+  PUBLISHABLE_KEY: string;
+  SECRET_KEY: string;
 };
 
 const ENV_KEYS: Record<keyof SupabaseStatus, string> = {
   API_URL: "NEXT_PUBLIC_SUPABASE_URL",
-  ANON_KEY: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  SERVICE_ROLE_KEY: "SUPABASE_SERVICE_ROLE_KEY",
+  PUBLISHABLE_KEY: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  SECRET_KEY: "SUPABASE_SECRET_KEY",
 };
 
 function parseStatusJson(stdout: string): SupabaseStatus {
@@ -34,15 +33,15 @@ function parseStatusJson(stdout: string): SupabaseStatus {
   }
 
   const parsed = JSON.parse(stdout.slice(start, end + 1)) as Partial<SupabaseStatus>;
-  const { API_URL, ANON_KEY, SERVICE_ROLE_KEY } = parsed;
+  const { API_URL, PUBLISHABLE_KEY, SECRET_KEY } = parsed;
 
-  if (!API_URL || !ANON_KEY || !SERVICE_ROLE_KEY) {
+  if (!API_URL || !PUBLISHABLE_KEY || !SECRET_KEY) {
     throw new Error(
-      "Missing API_URL, ANON_KEY, or SERVICE_ROLE_KEY in `supabase status` output",
+      "Missing API_URL, PUBLISHABLE_KEY, or SECRET_KEY in `supabase status` output",
     );
   }
 
-  return { API_URL, ANON_KEY, SERVICE_ROLE_KEY };
+  return { API_URL, PUBLISHABLE_KEY, SECRET_KEY };
 }
 
 function fetchStatus(): SupabaseStatus {

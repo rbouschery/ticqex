@@ -29,12 +29,12 @@ Start the stack, sync API keys into `.env.local`, apply migrations, and seed the
 
 ```bash
 pnpm db:start
-pnpm db:env          # writes NEXT_PUBLIC_SUPABASE_* and SUPABASE_SERVICE_ROLE_KEY
+pnpm db:env          # writes NEXT_PUBLIC_SUPABASE_* and SUPABASE_SECRET_KEY
 pnpm db:reset        # migrations + seed.sql
 pnpm db:seed-admin   # admin@ticqex.local (password from .env.local)
 ```
 
-`pnpm db:env` reads JWT keys from `supabase status -o json` (not the `sb_publishable_*` / `sb_secret_*` lines in the human-readable status output).
+`pnpm db:env` reads publishable and secret keys from `supabase status -o json` (`PUBLISHABLE_KEY` / `SECRET_KEY`).
 
 ### 3. Run the app
 
@@ -49,8 +49,8 @@ Open [http://localhost:3000](http://localhost:3000), sign in with `SEED_ADMIN_*`
 | Variable | Source | Required for |
 |----------|--------|----------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | `pnpm db:env` | App + API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `pnpm db:env` | App auth (client) |
-| `SUPABASE_SERVICE_ROLE_KEY` | `pnpm db:env` | Admin seed, server jobs |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `pnpm db:env` | App auth (client) |
+| `SUPABASE_SECRET_KEY` | `pnpm db:env` | Admin seed, server jobs |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `.env.example` defaults | `pnpm db:seed-admin` |
 | `RESEND_*`, `SUPPORT_*` | Cursor Cloud secrets or `.env.local` | Email in/out |
 
@@ -61,7 +61,7 @@ Async email processing uses Next.js `after()` — no external job runner require
 1. Create a project at [supabase.com](https://supabase.com).
 2. `pnpm supabase link --project-ref <ref>`
 3. `pnpm supabase db push`
-4. Set cloud URL and service role key in `.env.local`, then `pnpm db:seed-admin`.
+4. Set cloud URL, publishable key, and secret key in `.env.local`, then `pnpm db:seed-admin`.
 
 ## Scripts
 

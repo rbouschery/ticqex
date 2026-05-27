@@ -18,14 +18,14 @@ const BATCH_SIZE = 100;
 async function main() {
   const reset = process.argv.includes("--reset");
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
 
-  if (!url || !serviceRoleKey) {
-    console.error("Missing Supabase URL or SERVICE_ROLE_KEY");
+  if (!url || !secretKey) {
+    console.error("Missing Supabase URL or SUPABASE_SECRET_KEY");
     process.exit(1);
   }
 
-  const db = createClient(url, serviceRoleKey, {
+  const db = createClient(url, secretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 

@@ -11,7 +11,8 @@ function requireEnv(key: string, hint?: string) {
 }
 
 requireEnv("NEXT_PUBLIC_SUPABASE_URL", "pnpm db:env");
-requireEnv("SUPABASE_SERVICE_ROLE_KEY", "pnpm db:env");
+requireEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "pnpm db:env");
+requireEnv("SUPABASE_SECRET_KEY", "pnpm db:env");
 requireEnv("RESEND_API_KEY", "Cursor Cloud secrets or .env.local");
 requireEnv("RESEND_INBOUND_WEBHOOK_SECRET", "Cursor Cloud secrets or Resend webhook signing secret");
 requireEnv("SUPPORT_EMAIL", "Cursor Cloud secrets or .env.local");

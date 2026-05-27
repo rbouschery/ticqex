@@ -49,8 +49,8 @@ function sortQuery(sort: unknown): string {
 
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const supabase = createClient(url, anonKey, {
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+  const supabase = createClient(url, publishableKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
@@ -117,7 +117,7 @@ async function main() {
     const sourceIds = sourceLane.tickets
       .map((ticket) => ticket.id)
       .filter((id) => id !== ticketId);
-    const targetIds = [...targetLane.tickets.map((ticket) => ticket.id), ticketId];
+    const targetIds = [ticketId, ...targetLane.tickets.map((ticket) => ticket.id)];
 
     await api("/api/v1/board/move-ticket", token, {
       method: "POST",
@@ -129,6 +129,20 @@ async function main() {
         target_ticket_ids: targetIds,
       }),
     });
+
+    const afterEditedSort = await api<BoardResponse>("/api/v1/board", token);
+    const editedLane = afterEditedSort.lanes.find(
+      (entry) => entry.status.id === targetLane.status.id,
+    );
+    const movedTicket = editedLane?.tickets.find((ticket) => ticket.id === ticketId);
+    if (!movedTicket) {
+      throw new Error("cross-lane move: ticket missing from target lane (default sort)");
+    }
+    if (editedLane!.tickets[0]?.id !== ticketId) {
+      throw new Error(
+        "cross-lane move: ticket should be first under last-edited (newest) sort",
+      );
+    }
 
     const afterMove = await api<BoardResponse>(
       `/api/v1/board?sort=${sortQuery({ mode: "manual" })}`,

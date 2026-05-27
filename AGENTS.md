@@ -45,7 +45,7 @@ Typically provided:
 | `SUPPORT_EMAIL` | Yes | Verified Resend sender |
 | `SUPPORT_FROM_NAME` | Yes | |
 | `NEXT_PUBLIC_APP_URL` | Yes | Set to `https://readbetter.rbouschery.de` when tunnel is up |
-| Supabase JWT keys | **No** | Written by `pnpm db:env` into `.env.local` after `pnpm db:start` |
+| Supabase keys | **No** | Written by `pnpm db:env` into `.env.local` after `pnpm db:start` (`PUBLISHABLE_KEY` / `SECRET_KEY`) |
 
 Local Supabase keys still go in **`.env.local`** via `pnpm db:env`. Email and tunnel secrets come from Cursor Cloud (or set manually in `.env.local` for non-cloud dev).
 
@@ -182,7 +182,7 @@ These are separate Resend settings. Inbound needs receiving enabled; outbound ne
 
 - **Docker in cloud VM**: Requires `fuse-overlayfs` storage driver and `iptables-legacy`. `/etc/docker/daemon.json` should include `{"storage-driver": "fuse-overlayfs"}`.
 - **Supabase stale state**: `supabase start` may report “already running” while DB container exited → `pnpm db:stop && pnpm db:start`.
-- **Supabase keys format**: CLI may show short keys (`sb_publishable_*`, `sb_secret_*`). This app uses JWT keys from `pnpm db:env` (`ANON_KEY` / `SERVICE_ROLE_KEY` in `supabase status -o json`).
+- **Supabase keys format**: Use publishable + secret keys from `pnpm db:env` (`PUBLISHABLE_KEY` / `SECRET_KEY` in `supabase status -o json`). Do not use legacy JWT `ANON_KEY` / `SERVICE_ROLE_KEY`.
 - **Nothing on :3000** → tunnel returns **502**; health URL fails publicly even if tunnel is up.
 - **`ticqex-dev` not running** → **1033/530** from Cloudflare.
 - **esbuild build scripts**: pnpm ignores esbuild postinstall by default; `tsx` seed scripts still work.

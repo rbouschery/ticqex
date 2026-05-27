@@ -6,9 +6,9 @@ export async function GET() {
   };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
 
-  if (!supabaseUrl || !serviceKey) {
+  if (!supabaseUrl || !secretKey) {
     checks.database = "unconfigured";
     return NextResponse.json(
       {
@@ -23,8 +23,8 @@ export async function GET() {
   try {
     const res = await fetch(`${supabaseUrl}/rest/v1/status_types?select=id&limit=1`, {
       headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
+        apikey: secretKey,
+        Authorization: `Bearer ${secretKey}`,
       },
       cache: "no-store",
     });

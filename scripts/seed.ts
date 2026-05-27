@@ -12,16 +12,16 @@ const password = process.env.SEED_ADMIN_PASSWORD ?? "ticqex-admin-change-me";
 
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
 
-  if (!url || !serviceRoleKey) {
+  if (!url || !secretKey) {
     console.error(
-      "Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (see .env.example)",
+      "Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY (see .env.example)",
     );
     process.exit(1);
   }
 
-  const supabase = createClient(url, serviceRoleKey, {
+  const supabase = createClient(url, secretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
