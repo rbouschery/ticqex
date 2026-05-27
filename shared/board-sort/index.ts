@@ -11,6 +11,10 @@ export {
 
 export { sortBoardTickets, type BoardSortableTicket } from "./sort";
 export {
+  statusChangeInsertIndex,
+  statusChangeTargetIds,
+} from "./status-change-placement";
+export {
   mergeVisibleLaneOrder,
   mergeFilteredLaneOrder,
   mergeFilteredLaneOrderWithRemoval,
