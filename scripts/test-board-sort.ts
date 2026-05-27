@@ -175,6 +175,71 @@ async function main() {
     });
   }
 
+  const staleBoard = await api<BoardResponse>("/api/v1/board", token);
+  const staleSource = staleBoard.lanes.find((entry) => entry.tickets.length >= 1);
+  const staleFirstTarget = staleBoard.lanes.find(
+    (entry) => entry.status.id !== staleSource?.status.id,
+  );
+  const staleSecondTarget = staleBoard.lanes.find(
+    (entry) =>
+      entry.status.id !== staleSource?.status.id &&
+      entry.status.id !== staleFirstTarget?.status.id,
+  );
+
+  if (staleSource && staleFirstTarget && staleSecondTarget) {
+    const ticketId = staleSource.tickets[0]!.id;
+    const staleSourceIds = staleSource.tickets
+      .map((ticket) => ticket.id)
+      .filter((id) => id !== ticketId);
+
+    await api("/api/v1/board/move-ticket", token, {
+      method: "POST",
+      body: JSON.stringify({
+        ticket_id: ticketId,
+        from_status_id: staleSource.status.id,
+        to_status_id: staleFirstTarget.status.id,
+        source_ticket_ids: staleSourceIds,
+        target_ticket_ids: [
+          ticketId,
+          ...staleFirstTarget.tickets.map((ticket) => ticket.id),
+        ],
+      }),
+    });
+
+    let restoreFromStatusId = staleFirstTarget.status.id;
+    let restoreSourceIds = staleFirstTarget.tickets.map((ticket) => ticket.id);
+
+    try {
+      await api("/api/v1/board/move-ticket", token, {
+        method: "POST",
+        body: JSON.stringify({
+          ticket_id: ticketId,
+          from_status_id: staleSource.status.id,
+          to_status_id: staleSecondTarget.status.id,
+          source_ticket_ids: staleSourceIds,
+          target_ticket_ids: [
+            ticketId,
+            ...staleSecondTarget.tickets.map((ticket) => ticket.id),
+          ],
+        }),
+      });
+
+      restoreFromStatusId = staleSecondTarget.status.id;
+      restoreSourceIds = staleSecondTarget.tickets.map((ticket) => ticket.id);
+    } finally {
+      await api("/api/v1/board/move-ticket", token, {
+        method: "POST",
+        body: JSON.stringify({
+          ticket_id: ticketId,
+          from_status_id: restoreFromStatusId,
+          to_status_id: staleSource.status.id,
+          source_ticket_ids: restoreSourceIds,
+          target_ticket_ids: staleSource.tickets.map((ticket) => ticket.id),
+        }),
+      });
+    }
+  }
+
   console.log("board-sort: ok");
   console.log(`  lanes: ${defaultBoard.lanes.length}`);
   if (createdLane) {
@@ -184,6 +249,11 @@ async function main() {
   if (sourceLane && targetLane) {
     console.log(
       `  cross-lane move checked ${sourceLane.status.name} → ${targetLane.status.name}`,
+    );
+  }
+  if (staleSource && staleFirstTarget && staleSecondTarget) {
+    console.log(
+      `  stale-source move checked ${staleSource.status.name} → ${staleSecondTarget.status.name}`,
     );
   }
 }

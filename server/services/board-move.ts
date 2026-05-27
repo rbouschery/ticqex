@@ -29,12 +29,18 @@ function laneOrderOptions(
   };
 }
 
+function removeOnlyLaneOrderOptions(ticketId: string) {
+  return {
+    visibleTicketIds: [ticketId],
+    removedTicketIds: [ticketId],
+  };
+}
+
 export async function moveTicketOnBoard(
   userId: string,
   input: MoveTicketOnBoardInput,
 ) {
   const db = createAdminClient();
-  const crossLane = input.from_status_id !== input.to_status_id;
 
   const { data: ticket, error: ticketError } = await db
     .from("tickets")
@@ -44,12 +50,13 @@ export async function moveTicketOnBoard(
 
   if (ticketError) throw ApiError.internal(ticketError.message);
   if (!ticket) throw ApiError.notFound("Ticket not found");
-  if (ticket.status_id !== input.from_status_id) {
-    throw ApiError.badRequest("Ticket is not in the expected source lane");
-  }
+
+  const actualFromStatusId = ticket.status_id as string;
+  const sourceMatchesRequest = actualFromStatusId === input.from_status_id;
+  const crossLane = actualFromStatusId !== input.to_status_id;
 
   if (crossLane) {
-    if (!input.source_ticket_ids) {
+    if (sourceMatchesRequest && !input.source_ticket_ids) {
       throw ApiError.badRequest(
         "source_ticket_ids is required when moving across lanes",
       );
@@ -68,21 +75,22 @@ export async function moveTicketOnBoard(
 
   const fc = input.filter_context;
   let sourceTicketIds: string[] | undefined;
-  let targetTicketIds: string[];
 
   if (crossLane) {
     sourceTicketIds = await setLaneOrder(
       userId,
-      input.from_status_id,
-      input.source_ticket_ids!,
-      laneOrderOptions(
-        fc?.source_visible_ticket_ids,
-        fc?.removed_ticket_ids ?? [input.ticket_id],
-      ),
+      actualFromStatusId,
+      sourceMatchesRequest ? input.source_ticket_ids! : [],
+      sourceMatchesRequest
+        ? laneOrderOptions(
+            fc?.source_visible_ticket_ids,
+            fc?.removed_ticket_ids ?? [input.ticket_id],
+          )
+        : removeOnlyLaneOrderOptions(input.ticket_id),
     );
   }
 
-  targetTicketIds = await setLaneOrder(
+  const targetTicketIds = await setLaneOrder(
     userId,
     input.to_status_id,
     input.target_ticket_ids,
@@ -90,12 +98,12 @@ export async function moveTicketOnBoard(
   );
 
   if (crossLane) {
-    invalidateLaneSortCache([input.from_status_id, input.to_status_id]);
+    invalidateLaneSortCache([actualFromStatusId, input.to_status_id]);
   }
 
   return {
     ticket_id: input.ticket_id,
-    from_status_id: input.from_status_id,
+    from_status_id: actualFromStatusId,
     to_status_id: input.to_status_id,
     source_ticket_ids: sourceTicketIds,
     target_ticket_ids: targetTicketIds,
