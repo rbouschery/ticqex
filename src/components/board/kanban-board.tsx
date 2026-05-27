@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DndContext, DragOverlay } from "@dnd-kit/core";
 import { PlusIcon } from "@phosphor-icons/react";
-import type { BoardSort } from "@shared/board-sort";
+import {
+  statusChangeInsertIndex,
+  statusChangeTargetIds,
+  type BoardSort,
+} from "@shared/board-sort";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +18,13 @@ import { useBoardQuery, type BoardResponse } from "@/hooks/use-board-query";
 import { useBoardDrag } from "@/hooks/use-board-drag";
 import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardLaneLoadMore } from "@/hooks/use-board-lane-load-more";
-import { seedManualOrder } from "./board-lane-order-client";
+import { applyTicketDrop } from "./board-dnd-utils";
+import {
+  buildFilterContext,
+  moveTicketOnBoard,
+  seedManualOrder,
+  visibleIdsForLane,
+} from "./board-lane-order-client";
 import { BoardFilterBar } from "./board-filter-bar";
 import { BoardSearchBar } from "./board-search-bar";
 import { BoardSortSelect } from "./board-sort-select";
@@ -53,9 +63,9 @@ export function KanbanBoard() {
     searchActive,
   });
 
-  const [allStatuses, setAllStatuses] = useState<{ id: string; name: string }[]>(
-    [],
-  );
+  const [allStatuses, setAllStatuses] = useState<
+    { id: string; name: string; color: string }[]
+  >([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
@@ -67,7 +77,9 @@ export function KanbanBoard() {
 
   useEffect(() => {
     if (statusesLoaded.current) return;
-    void apiFetch<{ id: string; name: string }[]>("/api/v1/statuses").then(
+    void apiFetch<{ id: string; name: string; color: string }[]>(
+      "/api/v1/statuses",
+    ).then(
       (statuses) => {
         setAllStatuses(statuses);
         statusesLoaded.current = true;
@@ -91,8 +103,73 @@ export function KanbanBoard() {
   );
 
   const reloadBoard = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["board"] });
+    void queryClient.refetchQueries({ queryKey: ["board"], type: "active" });
   }, [queryClient]);
+
+  const moveTicketStatus = useCallback(
+    async (ticketId: string, fromStatusId: string, toStatusId: string) => {
+      if (fromStatusId === toStatusId) return;
+
+      const startLanes = lanes;
+      const toLane = startLanes.find((lane) => lane.status.id === toStatusId);
+      const insertIndex = statusChangeInsertIndex(
+        querySort,
+        toLane?.tickets.length ?? 0,
+      );
+      const touchedAt = new Date().toISOString();
+      let optimistic = applyTicketDrop(
+        startLanes,
+        ticketId,
+        fromStatusId,
+        toStatusId,
+        insertIndex,
+      );
+
+      if (optimistic) {
+        optimistic = optimistic.map((lane) => ({
+          ...lane,
+          tickets: lane.tickets.map((ticket) =>
+            ticket.id === ticketId
+              ? { ...ticket, updated_at: touchedAt }
+              : ticket,
+          ),
+        }));
+        setLanes(optimistic);
+      }
+
+      const finalLanes = optimistic ?? startLanes;
+      const crossLane = fromStatusId !== toStatusId;
+      const targetIds = statusChangeTargetIds(
+        querySort,
+        ticketId,
+        visibleIdsForLane(finalLanes, toStatusId),
+      );
+
+      await moveTicketOnBoard({
+        ticket_id: ticketId,
+        from_status_id: fromStatusId,
+        to_status_id: toStatusId,
+        target_ticket_ids: targetIds,
+        ...(crossLane
+          ? {
+              source_ticket_ids: visibleIdsForLane(
+                finalLanes,
+                fromStatusId,
+              ).filter((id) => id !== ticketId),
+              filter_context: buildFilterContext({
+                subsetActive,
+                startLanes,
+                fromLaneId: fromStatusId,
+                toLaneId: toStatusId,
+                ticketId,
+                crossLane,
+              }),
+            }
+          : {}),
+      });
+    },
+    [lanes, querySort, setLanes, subsetActive],
+  );
 
   const patchTicketUnread = useCallback(
     (ticketId: string, unreadCount: number) => {
@@ -229,6 +306,8 @@ export function KanbanBoard() {
         {selectedId && (
           <TicketModal
             ticketId={selectedId}
+            statuses={allStatuses}
+            onStatusChange={moveTicketStatus}
             onClose={() => setSelectedId(null)}
             onBoardChange={handleBoardChange}
           />
@@ -305,6 +384,8 @@ export function KanbanBoard() {
       {selectedId && (
         <TicketModal
           ticketId={selectedId}
+          statuses={allStatuses}
+          onStatusChange={moveTicketStatus}
           onClose={() => setSelectedId(null)}
           onBoardChange={handleBoardChange}
         />

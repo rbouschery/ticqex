@@ -25,6 +25,10 @@ import {
 } from "./email-conversation-panel";
 import { TicketCustomerSection } from "./ticket-customer-section";
 import { TicketDetailsSection } from "./ticket-details-section";
+import {
+  TicketStatusCombobox,
+  type StatusOption,
+} from "./ticket-status-combobox";
 import type {
   EmailComposePayload,
   TicketDetail,
@@ -45,10 +49,18 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
 export function TicketModal({
   ticketId,
+  statuses,
+  onStatusChange,
   onClose,
   onBoardChange,
 }: {
   ticketId: string;
+  statuses: StatusOption[];
+  onStatusChange: (
+    ticketId: string,
+    fromStatusId: string,
+    toStatusId: string,
+  ) => Promise<void>;
   onClose: () => void;
   onBoardChange: (updated?: TicketDetail) => void;
 }) {
@@ -133,6 +145,22 @@ export function TicketModal({
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  async function changeStatus(statusId: string) {
+    if (!ticket || ticket.status_id === statusId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onStatusChange(ticketId, ticket.status_id, statusId);
+      const refreshed = await apiFetch<TicketDetail>(`/api/v1/tickets/${ticketId}`);
+      setTicket(refreshed);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to change status");
+      onBoardChange();
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function saveMeta() {
     if (!ticket) return;
@@ -246,16 +274,25 @@ export function TicketModal({
                 ) : (
                   <Badge variant="secondary" className="shrink-0">Email conversation</Badge>
                 )}
-                {ticket.status && (
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span
-                      className="size-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: ticket.status.color }}
-                    />
-                    <span className="text-sm font-medium text-foreground">
-                      {ticket.status.name}
-                    </span>
-                  </div>
+                {(ticket.status || statuses.length > 0) && (
+                  <TicketStatusCombobox
+                    statuses={
+                      statuses.length > 0
+                        ? statuses
+                        : ticket.status
+                          ? [
+                              {
+                                id: ticket.status.id,
+                                name: ticket.status.name,
+                                color: ticket.status.color,
+                              },
+                            ]
+                          : []
+                    }
+                    value={ticket.status_id}
+                    onValueChange={(id) => void changeStatus(id)}
+                    disabled={saving}
+                  />
                 )}
               </>
             )}
