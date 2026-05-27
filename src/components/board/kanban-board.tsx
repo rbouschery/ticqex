@@ -32,9 +32,19 @@ import { TicketCard } from "./ticket-card";
 import { LaneColumn } from "./lane-column";
 import { TicketModal } from "./ticket-modal";
 import { CreateTicketModal } from "./create-ticket-modal";
+import {
+  buildOptimisticBoardTicket,
+  insertNewTicketIntoLane,
+  removeTicketFromLanes,
+  replaceTicketInLanes,
+  shouldOptimisticallyShowTicket,
+  ticketDetailToBoardTicket,
+  type CreateTicketPayload,
+} from "./board-create-client";
 import type { BoardLane, TicketDetail } from "./types";
 
 const MANUAL_SORT: BoardSort = { mode: "manual" };
+const REALTIME_MUTE_MS = 600;
 
 export function KanbanBoard() {
   const queryClient = useQueryClient();
@@ -253,6 +263,86 @@ export function KanbanBoard() {
 
   useBoardRealtime(reloadBoard, dragSessionRef);
 
+  const handleCreateTicket = useCallback(
+    (payload: CreateTicketPayload) => {
+      setShowCreate(false);
+      setMoveError(null);
+
+      const tempId = crypto.randomUUID();
+      const now = new Date().toISOString();
+      const optimistic = buildOptimisticBoardTicket(payload, tempId, now);
+      const showOptimistic = shouldOptimisticallyShowTicket({
+        ticket: optimistic,
+        filter,
+        searchQuery,
+        searchActive,
+        capped,
+      });
+
+      if (showOptimistic) {
+        dragSessionRef.current.mutedUntil = Date.now() + REALTIME_MUTE_MS;
+        setLanes((current) =>
+          insertNewTicketIntoLane(current, payload.statusId, optimistic, querySort),
+        );
+      }
+
+      const tagNames = payload.tags
+        .map((tag) => tag.name.trim())
+        .filter(Boolean);
+
+      void (async () => {
+        try {
+          const created = await apiFetch<TicketDetail>("/api/v1/tickets", {
+            method: "POST",
+            body: JSON.stringify({
+              kind: "task",
+              title: payload.title,
+              ...(payload.body ? { body: payload.body } : {}),
+              ...(payload.customerUsername
+                ? { customer: { username: payload.customerUsername } }
+                : {}),
+              ...(payload.statusId ? { status_id: payload.statusId } : {}),
+              ...(tagNames.length ? { tags: tagNames } : {}),
+              origin: "manual",
+            }),
+          });
+
+          dragSessionRef.current.mutedUntil = Date.now() + REALTIME_MUTE_MS;
+
+          if (showOptimistic) {
+            setLanes((current) =>
+              replaceTicketInLanes(
+                current,
+                tempId,
+                ticketDetailToBoardTicket(created),
+              ),
+            );
+          }
+
+          void queryClient.refetchQueries({
+            queryKey: ["board"],
+            type: "active",
+          });
+        } catch (err) {
+          if (showOptimistic) {
+            setLanes((current) => removeTicketFromLanes(current, tempId));
+          }
+          setMoveError(err instanceof Error ? err.message : "Create failed");
+        }
+      })();
+    },
+    [
+      capped,
+      dragSessionRef,
+      filter,
+      queryClient,
+      querySort,
+      searchActive,
+      searchQuery,
+      setLanes,
+    ],
+  );
+
   const hasSearchResults = lanes.some((lane) => lane.tickets.length > 0);
 
   const header = (
@@ -395,10 +485,7 @@ export function KanbanBoard() {
         <CreateTicketModal
           statuses={allStatuses}
           onClose={() => setShowCreate(false)}
-          onCreated={() => {
-            setShowCreate(false);
-            reloadBoard();
-          }}
+          onCreate={handleCreateTicket}
         />
       )}
     </div>

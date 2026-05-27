@@ -24,15 +24,16 @@ import { TagMultiSelect } from "@/components/tags/tag-multi-select";
 import type { Tag } from "@/components/tags/types";
 import { apiFetch } from "@/lib/api-client";
 import { useRecentTags } from "@/hooks/use-recent-tags";
+import type { CreateTicketPayload } from "./board-create-client";
 
 export function CreateTicketModal({
   statuses,
   onClose,
-  onCreated,
+  onCreate,
 }: {
   statuses: { id: string; name: string }[];
   onClose: () => void;
-  onCreated: () => void;
+  onCreate: (payload: CreateTicketPayload) => void;
 }) {
   const [title, setTitle] = useState("");
   const [customer, setCustomer] = useState("");
@@ -41,7 +42,6 @@ export function CreateTicketModal({
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const { recentNames, touch: touchRecentTags } = useRecentTags();
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export function CreateTicketModal({
       });
   }, []);
 
-  async function onSubmit(e: FormEvent) {
+  function onSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
@@ -60,34 +60,19 @@ export function CreateTicketModal({
       return;
     }
 
-    setLoading(true);
     setError(null);
     const trimmedBody = body.trim();
     const trimmedCustomer = customer.trim();
     const tagNames = selectedTags.map((tag) => tag.name.trim()).filter(Boolean);
 
-    try {
-      await apiFetch("/api/v1/tickets", {
-        method: "POST",
-        body: JSON.stringify({
-          kind: "task",
-          title: trimmedTitle,
-          ...(trimmedBody ? { body: trimmedBody } : {}),
-          ...(trimmedCustomer
-            ? { customer: { username: trimmedCustomer } }
-            : {}),
-          ...(statusId ? { status_id: statusId } : {}),
-          ...(tagNames.length ? { tags: tagNames } : {}),
-          origin: "manual",
-        }),
-      });
-      if (tagNames.length) touchRecentTags(tagNames);
-      onCreated();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Create failed");
-    } finally {
-      setLoading(false);
-    }
+    onCreate({
+      title: trimmedTitle,
+      ...(trimmedBody ? { body: trimmedBody } : {}),
+      ...(trimmedCustomer ? { customerUsername: trimmedCustomer } : {}),
+      statusId,
+      tags: selectedTags,
+    });
+    if (tagNames.length) touchRecentTags(tagNames);
   }
 
   return (
@@ -137,7 +122,6 @@ export function CreateTicketModal({
               options={allTags}
               onChange={setSelectedTags}
               recentNames={recentNames}
-              disabled={loading}
             />
           </div>
           <div className="space-y-2">
@@ -158,7 +142,7 @@ export function CreateTicketModal({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !title.trim()}>
+            <Button type="submit" disabled={!title.trim()}>
               Create
             </Button>
           </DialogFooter>
