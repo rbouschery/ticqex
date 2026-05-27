@@ -25,13 +25,19 @@ cp .env.example .env.local
 
 ### 2. Local Supabase
 
-Start the stack, sync API keys into `.env.local`, apply migrations, and seed the admin user:
+Start the stack, sync API keys into `.env.local`, apply migrations, and bootstrap required app data:
 
 ```bash
 pnpm db:start
 pnpm db:env          # writes NEXT_PUBLIC_SUPABASE_* and SUPABASE_SECRET_KEY
-pnpm db:reset        # migrations + seed.sql
+pnpm db:bootstrap    # status columns + global_settings (empty board; no admin user)
+```
+
+Optional:
+
+```bash
 pnpm db:seed-admin   # admin@ticqex.local (password from .env.local)
+pnpm db:reset        # migrations + bootstrap + demo tickets (wipes local DB)
 ```
 
 `pnpm db:env` reads publishable and secret keys from `supabase status -o json` (`PUBLISHABLE_KEY` / `SECRET_KEY`).
@@ -70,8 +76,9 @@ Async email processing uses Next.js `after()` — no external job runner require
 | `pnpm dev` | Next.js dev server (UI, API, background email) |
 | `pnpm env:verify` | Check required env vars are set |
 | `pnpm db:start` / `db:stop` / `db:reset` | Local Supabase |
+| `pnpm db:bootstrap` | Required statuses + settings (empty board) |
 | `pnpm db:env` | Sync Supabase keys → `.env.local` |
-| `pnpm db:seed-admin` | Create local admin user |
+| `pnpm db:seed-admin` | Optional: create local admin user |
 
 ## Project layout
 
