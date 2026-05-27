@@ -20,6 +20,7 @@
     "test:board-search": "tsx --env-file=.env.local scripts/test-board-search.ts",
     "seed:board-load": "tsx --env-file=.env.local scripts/seed-board-load.ts",
     "test:board-sort": "tsx --env-file=.env.local scripts/test-board-sort.ts",
+    "test:board-dnd": "tsx src/components/board/board-dnd-utils.test.ts",
     "test:merge-lane-order": "tsx shared/board-sort/merge-lane-order.test.ts"
   },
   "dependencies": {

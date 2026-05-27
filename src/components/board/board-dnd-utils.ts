@@ -95,10 +95,22 @@ export function applyTicketDrop(
 
   return lanes.map((entry) => {
     if (entry.status.id === fromLaneId) {
-      return { ...entry, tickets: nextFromTickets };
+      return {
+        ...entry,
+        tickets: nextFromTickets,
+        total_count:
+          entry.total_count != null
+            ? Math.max(0, entry.total_count - 1)
+            : undefined,
+      };
     }
     if (entry.status.id === toLaneId) {
-      return { ...entry, tickets: nextTargetTickets };
+      return {
+        ...entry,
+        tickets: nextTargetTickets,
+        total_count:
+          entry.total_count != null ? entry.total_count + 1 : undefined,
+      };
     }
     return entry;
   });
