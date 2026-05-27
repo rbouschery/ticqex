@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@server/lib/supabase-admin";
 import { ApiError } from "@server/lib/errors";
+import { invalidateLaneSortCache } from "@server/services/board-lane-sort-cache";
 import { mergeFilteredLaneOrder, mergeFilteredLaneOrderWithRemoval } from "@shared/board-sort/merge-lane-order";
 
 export async function loadLaneOrdersForUser(
@@ -228,4 +229,6 @@ export async function syncTicketLaneOrderOnStatusChange(
     onConflict: "user_id,status_id",
   });
   if (error) throw ApiError.internal(error.message);
+
+  invalidateLaneSortCache([oldStatusId, newStatusId]);
 }

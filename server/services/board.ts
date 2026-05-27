@@ -16,13 +16,10 @@ import { resolveFilteredTicketIds } from "@server/services/ticket-filters";
 import { resolveSearchTicketIds } from "@server/services/board-search";
 import { createHash } from "node:crypto";
 import { CHUNK_SIZE, chunkArray } from "@server/lib/chunked-array";
-
-/** Reuse sorted lane IDs across load-more requests within a warm instance. */
-const LANE_SORT_CACHE_TTL_MS = 30_000;
-const laneSortCache = new Map<
-  string,
-  { ids: string[]; expiresAt: number }
->();
+import {
+  getLaneSortCacheEntry,
+  setLaneSortCacheEntry,
+} from "@server/services/board-lane-sort-cache";
 
 type LightweightTicketRow = {
   id: string;
@@ -219,11 +216,8 @@ async function getSortedLaneIds(
   manualOrder: string[] | undefined,
 ): Promise<string[]> {
   const key = laneSortCacheKey(statusId, restrictedIds, sort, manualOrder);
-  const cached = laneSortCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.ids;
-  }
-  laneSortCache.delete(key);
+  const cached = getLaneSortCacheEntry(key);
+  if (cached) return cached;
 
   const lightweight = await loadLightweightTicketsInLane(
     db,
@@ -232,7 +226,7 @@ async function getSortedLaneIds(
   );
   const sorted = sortBoardTickets(lightweight, sort, manualOrder);
   const ids = sorted.map((row) => row.id);
-  laneSortCache.set(key, { ids, expiresAt: Date.now() + LANE_SORT_CACHE_TTL_MS });
+  setLaneSortCacheEntry(key, ids);
   return ids;
 }
 
@@ -260,7 +254,10 @@ async function loadLanePage(
     const byId = new Map(fullRows.map((row) => [row.id, row]));
     const rows = pageIds
       .map((id) => byId.get(id))
-      .filter((row): row is BoardTicketRow => row !== undefined);
+      .filter(
+        (row): row is BoardTicketRow =>
+          row !== undefined && row.status_id === statusId,
+      );
     return { rows, total_count, has_more };
   }
 
