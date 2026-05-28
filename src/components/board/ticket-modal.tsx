@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { CopyIcon } from "@phosphor-icons/react";
@@ -101,6 +101,10 @@ export function TicketModal({
   const [draft, setDraft] = useState<TicketDraft | null>(null);
   const { recentNames, touch: touchRecentTags } = useRecentTags();
   const [saving, setSaving] = useState(false);
+  const [optimisticStatusId, setOptimisticStatusId] = useState<string | null>(
+    null,
+  );
+  const optimisticStatusRef = useRef<string | null>(null);
   const [errorState, setErrorState] = useState<{
     ticketId: string;
     message: string;
@@ -163,6 +167,11 @@ export function TicketModal({
   }, [summary, ticketId, queryClient, onBoardChange]);
 
   useEffect(() => {
+    optimisticStatusRef.current = null;
+    setOptimisticStatusId(null);
+  }, [ticketId]);
+
+  useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== "x" && e.key !== "X") return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -176,6 +185,10 @@ export function TicketModal({
   }, [onClose]);
 
   const displaySeed = summary ?? initialSeed;
+  const effectiveStatusId =
+    optimisticStatusId ??
+    summary?.status_id ??
+    initialSeed?.status_id;
   const displayTitle = title || displaySeed?.title || "";
   const headerLoading = !displaySeed && summaryQuery.isPending;
   const metaLoading =
@@ -183,6 +196,90 @@ export function TicketModal({
   const metaReady = !!summary;
   const detailSummary = summary;
   const isConversation = displaySeed?.kind === "conversation";
+
+  const patchSummaryStatus = useCallback(
+    (statusId: string) => {
+      const statusMeta =
+        statuses.find((s) => s.id === statusId) ??
+        (summary?.status?.id === statusId ? summary.status : undefined) ??
+        (initialSeed?.status?.id === statusId ? initialSeed.status : undefined);
+      if (!statusMeta) return;
+      queryClient.setQueryData<TicketSummary>(
+        ticketSummaryQueryKey(ticketId),
+        (current) =>
+          current
+            ? {
+                ...current,
+                status_id: statusId,
+                status: {
+                  id: statusMeta.id,
+                  name: statusMeta.name,
+                  color: statusMeta.color,
+                },
+              }
+            : current,
+      );
+    },
+    [statuses, summary, initialSeed, queryClient, ticketId],
+  );
+
+  const changeStatus = useCallback(
+    (statusId: string) => {
+      const fromStatusId =
+        optimisticStatusRef.current ??
+        queryClient.getQueryData<TicketSummary>(
+          ticketSummaryQueryKey(ticketId),
+        )?.status_id ??
+        initialSeed?.status_id;
+      if (!fromStatusId || fromStatusId === statusId) return;
+
+      const previousSummary = queryClient.getQueryData<TicketSummary>(
+        ticketSummaryQueryKey(ticketId),
+      );
+      const rollbackStatusId =
+        previousSummary?.status_id ?? initialSeed?.status_id ?? null;
+
+      optimisticStatusRef.current = statusId;
+      setOptimisticStatusId(statusId);
+      setCurrentError(null);
+      patchSummaryStatus(statusId);
+
+      void (async () => {
+        try {
+          await onStatusChange(ticketId, fromStatusId, statusId);
+          if (optimisticStatusRef.current === statusId) {
+            optimisticStatusRef.current = null;
+            setOptimisticStatusId(null);
+          }
+          void queryClient.invalidateQueries({
+            queryKey: ticketSummaryQueryKey(ticketId),
+          });
+        } catch (e) {
+          optimisticStatusRef.current = rollbackStatusId;
+          setOptimisticStatusId(rollbackStatusId);
+          if (previousSummary) {
+            queryClient.setQueryData(
+              ticketSummaryQueryKey(ticketId),
+              previousSummary,
+            );
+          }
+          setCurrentError(
+            e instanceof Error ? e.message : "Failed to change status",
+          );
+          onBoardChange();
+        }
+      })();
+    },
+    [
+      queryClient,
+      ticketId,
+      initialSeed?.status_id,
+      patchSummaryStatus,
+      onStatusChange,
+      onBoardChange,
+      setCurrentError,
+    ],
+  );
 
   async function saveMeta() {
     const source = summary;
@@ -295,72 +392,6 @@ export function TicketModal({
     return [];
   }, [statuses, summary, initialSeed]);
 
-  const changeStatus = useCallback(
-    (statusId: string) => {
-      const source = summary;
-      if (!source || source.status_id === statusId) return;
-
-      const newStatus = statusOptions.find((s) => s.id === statusId);
-      const fromStatusId = source.status_id;
-      const previousStatus = source.status;
-
-      setCurrentError(null);
-
-      queryClient.setQueryData<TicketSummary>(
-        ticketSummaryQueryKey(ticketId),
-        (current) =>
-          current
-            ? {
-                ...current,
-                status_id: statusId,
-                status: newStatus
-                  ? {
-                      id: newStatus.id,
-                      name: newStatus.name,
-                      color: newStatus.color,
-                    }
-                  : current.status,
-                updated_at: new Date().toISOString(),
-              }
-            : current,
-      );
-
-      void (async () => {
-        try {
-          await onStatusChange(ticketId, fromStatusId, statusId);
-          void queryClient.invalidateQueries({
-            queryKey: ticketSummaryQueryKey(ticketId),
-          });
-        } catch (e) {
-          queryClient.setQueryData<TicketSummary>(
-            ticketSummaryQueryKey(ticketId),
-            (current) =>
-              current
-                ? {
-                    ...current,
-                    status_id: fromStatusId,
-                    status: previousStatus,
-                  }
-                : current,
-          );
-          setCurrentError(
-            e instanceof Error ? e.message : "Failed to change status",
-          );
-          onBoardChange();
-        }
-      })();
-    },
-    [
-      summary,
-      statusOptions,
-      ticketId,
-      queryClient,
-      onStatusChange,
-      onBoardChange,
-      setCurrentError,
-    ],
-  );
-
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -390,12 +421,12 @@ export function TicketModal({
                     Email conversation
                   </Badge>
                 )}
-                {statusOptions.length > 0 && displaySeed.status_id && (
+                {statusOptions.length > 0 && effectiveStatusId && (
                   <TicketStatusCombobox
                     statuses={statusOptions}
-                    value={displaySeed.status_id}
+                    value={effectiveStatusId}
                     onValueChange={changeStatus}
-                    disabled={!summary}
+                    disabled={statusOptions.length === 0}
                   />
                 )}
               </>
