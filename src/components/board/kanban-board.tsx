@@ -21,6 +21,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api-client";
+import {
+  readLastBoardLaneCount,
+  writeLastBoardLaneCount,
+} from "@/lib/board-last-lane-count";
 import { useBoardView } from "@/hooks/use-board-view";
 import { useBoardQuery, type BoardResponse } from "@/hooks/use-board-query";
 import { useBoardDrag } from "@/hooks/use-board-drag";
@@ -80,6 +84,7 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
   } = useBoardView();
 
   const [querySort, setQuerySort] = useState(sort);
+  const [skeletonLaneCount] = useState(() => readLastBoardLaneCount());
 
   const boardQuery = useBoardQuery(filter, querySort, searchQuery);
   const lanes = boardQuery.data?.lanes ?? EMPTY_LANES;
@@ -131,6 +136,10 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
   const loading = boardQuery.isPending && !boardQuery.data;
   const error =
     boardQuery.error instanceof Error ? boardQuery.error.message : null;
+
+  useEffect(() => {
+    if (lanes.length > 0) writeLastBoardLaneCount(lanes.length);
+  }, [lanes.length]);
 
   useEffect(() => {
     prefetchTicketReferenceData(queryClient);
@@ -449,7 +458,7 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
           </div>
           <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
             <div className="flex h-full w-max min-w-full justify-center gap-4 p-4">
-              {Array.from({ length: 4 }).map((_, i) => (
+              {Array.from({ length: skeletonLaneCount }).map((_, i) => (
                 <Skeleton key={i} className="h-full w-72 shrink-0 rounded-xl" />
               ))}
             </div>
