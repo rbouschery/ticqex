@@ -1,5 +1,5 @@
 -- Ticqex initial schema (Phase 0)
--- See docs/DATA-MODEL.md
+-- Initial schema
 
 -- Enums
 CREATE TYPE public.user_role AS ENUM ('admin', 'agent');

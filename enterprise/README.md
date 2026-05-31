@@ -30,5 +30,3 @@ Nothing here yet. Candidates for future development:
 - Do not import from `/enterprise` in core code
 - Enterprise code may import from core
 - When adding a feature, decide: core (MIT) or enterprise (commercial)? Default to core unless it clearly serves hosted/multi-tenant customers only
-
-See [docs/VISION.md](../docs/VISION.md) for the full open-core strategy.

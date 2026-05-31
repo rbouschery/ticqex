@@ -12,7 +12,7 @@ Local development of **inbound email** (Resend webhook → ticket) and **outboun
 
 Do **not** use `cloudflared tunnel --url http://localhost:3000` for Resend/webhook testing on that hostname — quick tunnels are a separate mechanism and do not use the named tunnel DNS.
 
-Further integration detail: [docs/INTEGRATIONS.md](./docs/INTEGRATIONS.md).
+Further integration detail: [INTEGRATIONS.md](../ticqex-workspace/docs/INTEGRATIONS.md) (private workspace docs).
 
 ### Services overview
 

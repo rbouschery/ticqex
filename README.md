@@ -2,12 +2,6 @@
 
 > API-first, open-core support platform with a realtime Kanban admin.
 
-Spec and planning docs live in [`docs/`](./docs/README.md).
-
-## Status
-
-**Phase 4 (Live board)** — Supabase Realtime sync across tabs; drag-and-drop error feedback. See [PHASES.md](./docs/PHASES.md).
-
 ## Quick start
 
 ### Prerequisites
@@ -77,7 +71,7 @@ Open [http://localhost:3000](http://localhost:3000), sign in with `SEED_ADMIN_*`
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `pnpm db:env` | App auth (client) |
 | `SUPABASE_SECRET_KEY` | `pnpm db:env` | Admin seed, server jobs |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `.env.example` defaults | `pnpm db:seed-admin` |
-| `RESEND_*`, `SUPPORT_*` | Cursor Cloud secrets or `.env.local` | Email in/out |
+| `RESEND_*`, `SUPPORT_*` | `.env.local` | Email in/out |
 
 Async email processing uses Next.js `after()` — no external job runner required.
 
@@ -107,23 +101,12 @@ Async email processing uses Next.js `after()` — no external job runner require
 | Path | Purpose |
 |------|---------|
 | `src/app/` | Next.js App Router (admin UI, API routes) |
-| `server/services/` | Business logic (Phase 1+) |
+| `server/services/` | Business logic |
 | `server/channels/` | Product channel behavior (email, future chat channels) |
 | `server/integrations/` | External provider integrations (Resend) |
-| `server/channels/` | Channel definitions (email) and product behavior contracts |
-| `server/integrations/` | Provider integrations (Resend) and env-backed runtime |
 | `config/` | OSS activation config (`ticqex.config.example.json` → local `ticqex.config.json`) |
 | `supabase/migrations/` | Database schema |
 | `enterprise/` | Commercial / hosted features (open-core boundary) |
-
-## Quick links
-
-- [Vision & principles](./docs/VISION.md)
-- [Naming](./docs/NAMING.md)
-- [Data model](./docs/DATA-MODEL.md)
-- [API design](./docs/API.md)
-- [Phased build plan](./docs/PHASES.md)
-- [Integrations (email, Realtime)](./docs/INTEGRATIONS.md)
 
 ## License
 
