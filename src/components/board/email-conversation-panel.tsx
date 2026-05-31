@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { usePersistedExpanded } from "@/hooks/use-persisted-expanded";
 import { cn } from "@/lib/utils";
-import { EmailCompose } from "./email-compose";
+import { EmailReplySection } from "./email-reply-section";
 import { EmailMessageBody } from "./email-message-body";
 import { EmailMessageHeader } from "./email-message-header";
 import type { ConversationTicketSummary } from "@/types/tickets";
@@ -50,6 +50,10 @@ export function EmailConversationPanel({
   ticketId,
   threadOrder,
   onSubmit,
+  onSaveDraft,
+  onUpdateDraft,
+  onSendDraft,
+  onDeleteDraft,
   saving,
   onToggleMessageRead,
 }: {
@@ -57,6 +61,14 @@ export function EmailConversationPanel({
   ticketId: string;
   threadOrder: EmailThreadOrder;
   onSubmit: (payload: EmailComposePayload) => Promise<void>;
+  onSaveDraft: (payload: EmailComposePayload) => Promise<void>;
+  onUpdateDraft: (id: string, payload: EmailComposePayload) => Promise<void>;
+  onSendDraft: (
+    id: string,
+    payload: EmailComposePayload,
+    includeQuote: boolean,
+  ) => Promise<void>;
+  onDeleteDraft: (id: string) => Promise<void>;
   saving: boolean;
   onToggleMessageRead: (messageId: string) => void;
 }) {
@@ -68,16 +80,22 @@ export function EmailConversationPanel({
   );
 
   const messages = useMemo(() => {
+    const visible = ticket.messages.filter(
+      (msg) => msg.email_delivery_status !== "draft",
+    );
     if (threadOrder === "newest_first") {
-      return [...ticket.messages].reverse();
+      return [...visible].reverse();
     }
-    return ticket.messages;
+    return visible;
   }, [ticket.messages, threadOrder]);
 
   const lastEmailMessage = useMemo((): MessageRow | null => {
-    if (!ticket.messages.length) return null;
-    for (let i = ticket.messages.length - 1; i >= 0; i--) {
-      const msg = ticket.messages[i];
+    const visible = ticket.messages.filter(
+      (msg) => msg.email_delivery_status !== "draft",
+    );
+    if (!visible.length) return null;
+    for (let i = visible.length - 1; i >= 0; i--) {
+      const msg = visible[i];
       if (isEmailMessage(msg)) return msg;
     }
     return null;
@@ -118,8 +136,8 @@ export function EmailConversationPanel({
         Conversation
         {!expanded && (
           <span className="ml-auto text-xs font-normal text-muted-foreground">
-            {ticket.messages.length}{" "}
-            {ticket.messages.length === 1 ? "message" : "messages"}
+            {messages.length}{" "}
+            {messages.length === 1 ? "message" : "messages"}
           </span>
         )}
       </button>
@@ -195,16 +213,18 @@ export function EmailConversationPanel({
       )}
 
       {ticket.channel === "email" && (
-        <div className="relative z-10 min-h-0 shrink-0 border-t border-border bg-background">
-          <EmailCompose
-            ticketId={ticketId}
-            customerEmail={customerEmail}
-            ticketTitle={ticket.title}
-            lastEmailMessage={lastEmailMessage}
-            onSubmit={onSubmit}
-            saving={saving}
-          />
-        </div>
+        <EmailReplySection
+          ticketId={ticketId}
+          customerEmail={customerEmail}
+          ticketTitle={ticket.title}
+          lastEmailMessage={lastEmailMessage}
+          onSubmit={onSubmit}
+          onSaveDraft={onSaveDraft}
+          onUpdateDraft={onUpdateDraft}
+          onSendDraft={onSendDraft}
+          onDeleteDraft={onDeleteDraft}
+          saving={saving}
+        />
       )}
     </div>
   );

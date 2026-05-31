@@ -72,6 +72,50 @@ export type AgentOutboundReplyContext = {
   lastSubjectMessage: MessageDbRow | null;
 };
 
+function prepareAgentReplyHeaders(
+  ticket: { title: string; contact_address: string },
+  context: AgentOutboundReplyContext,
+  input: AgentOutboundReplyInput,
+): Omit<PreparedAgentOutboundReply, "body"> {
+  const contactEmail = ticket.contact_address.trim();
+  if (!contactEmail) {
+    throw ApiError.internal("Ticket contact address not found");
+  }
+
+  const { lastCustomerMessage, lastSubjectMessage } = context;
+
+  return {
+    emailTo: [contactEmail],
+    emailCc: computeReplyCc(
+      {
+        cc: input.email?.cc,
+        reply_all: input.email?.reply_all,
+      },
+      lastCustomerMessage,
+      contactEmail,
+    ),
+    emailSubject: input.email?.subject
+      ? input.email.subject
+      : formatReplySubject(
+          lastSubjectMessage?.email_subject ?? null,
+          ticket.title,
+        ),
+    emailFrom: `${process.env.SUPPORT_FROM_NAME ?? "Support"} <${supportEmail()}>`,
+  };
+}
+
+export async function prepareAgentDraftReply(
+  ticket: {
+    title: string;
+    contact_address: string;
+  },
+  context: AgentOutboundReplyContext,
+  input: AgentOutboundReplyInput,
+): Promise<PreparedAgentOutboundReply> {
+  const headers = prepareAgentReplyHeaders(ticket, context, input);
+  return { body: input.body.trim(), ...headers };
+}
+
 export async function prepareAgentOutboundReply(
   ticket: {
     title: string;
@@ -85,25 +129,10 @@ export async function prepareAgentOutboundReply(
     throw ApiError.internal("Ticket contact address not found");
   }
 
-  const { lastCustomerMessage, lastSubjectMessage } = context;
+  const { lastCustomerMessage } = context;
+  const headers = prepareAgentReplyHeaders(ticket, context, input);
 
   let body = input.body;
-  const emailTo = [contactEmail];
-  const emailCc = computeReplyCc(
-    {
-      cc: input.email?.cc,
-      reply_all: input.email?.reply_all,
-    },
-    lastCustomerMessage,
-    contactEmail,
-  );
-  const emailSubject = input.email?.subject
-    ? input.email.subject
-    : formatReplySubject(
-        lastSubjectMessage?.email_subject ?? null,
-        ticket.title,
-      );
-  const emailFrom = `${process.env.SUPPORT_FROM_NAME ?? "Support"} <${supportEmail()}>`;
 
   if (input.email?.include_quote && lastCustomerMessage) {
     const quoteAuthor =
@@ -121,5 +150,5 @@ export async function prepareAgentOutboundReply(
     body = `${body.trim()}\n\n${signature}`;
   }
 
-  return { body, emailFrom, emailTo, emailCc, emailSubject };
+  return { body, ...headers };
 }

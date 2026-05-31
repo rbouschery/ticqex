@@ -25,6 +25,7 @@ export async function sendOutboundEmailForMessage(messageId: string) {
     .eq("id", messageId)
     .single();
   if (!message || message.visibility !== "public") return;
+  if (message.email_delivery_status === "draft") return;
   if (message.email_message_id) return;
 
   const from = message.email_from as string | null;

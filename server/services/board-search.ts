@@ -57,6 +57,7 @@ export async function resolveSearchTicketIds(
       .from("messages")
       .select("ticket_id")
       .eq("visibility", "public")
+      .or("email_delivery_status.is.null,email_delivery_status.neq.draft")
       .ilike("body", pattern),
     db
       .from("custom_field_values")

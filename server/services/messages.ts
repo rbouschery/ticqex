@@ -7,16 +7,24 @@ import {
   loadTicketRow,
   type TicketRow,
 } from "@server/domain/ticket";
-import { linkUploadsToMessage } from "@server/services/attachment-uploads";
+import { linkUploadsToMessage, loadStagedAttachmentsForMessages } from "@server/services/attachment-uploads";
 import {
   assertChannelReadyToSend,
   assertSendRecipientMatchesLockedFields,
 } from "@server/channels/field-enforcement";
-import { prepareAgentOutboundReply } from "@server/services/outbound-replies";
+import {
+  prepareAgentDraftReply,
+  prepareAgentOutboundReply,
+} from "@server/services/outbound-replies";
 import { loadReadMessageIds } from "@server/services/message-reads";
 import { touchTicket } from "@server/services/ticket-touch";
 import type { AuthContext } from "@server/middleware/auth";
 import type { MessageDbRow } from "@/types/database";
+
+export const EMAIL_DRAFT_STATUS = "draft";
+
+const PUBLIC_NON_DRAFT_FILTER =
+  "email_delivery_status.is.null,email_delivery_status.neq.draft";
 
 export type MessageAttachmentRow = {
   id: string;
@@ -111,9 +119,31 @@ export async function listMessages(ticketId: string) {
     .select("*")
     .eq("ticket_id", ticketId)
     .eq("visibility", "public")
+    .or(PUBLIC_NON_DRAFT_FILTER)
     .order("created_at");
   if (error) throw ApiError.internal(error.message);
   return data ?? [];
+}
+
+export async function listTicketDrafts(ticketId: string) {
+  await loadMessageTicket(ticketId);
+
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("messages")
+    .select("*")
+    .eq("ticket_id", ticketId)
+    .eq("email_delivery_status", EMAIL_DRAFT_STATUS)
+    .order("created_at", { ascending: false });
+  if (error) throw ApiError.internal(error.message);
+  return data ?? [];
+}
+
+export async function listEnrichedDrafts(ticketId: string) {
+  const rows = await listTicketDrafts(ticketId);
+  const messageIds = rows.map((m) => m.id);
+  const attachmentsMap = await loadStagedAttachmentsForMessages(messageIds);
+  return enrichMessages(rows, { attachmentsMap });
 }
 
 export async function listEnrichedMessages(ticketId: string, userId?: string) {
@@ -153,7 +183,7 @@ export type InsertMessageInput = {
   emailCc?: string[];
   emailSubject?: string | null;
   emailBodyHtml?: string | null;
-  emailDeliveryStatus?: "pending" | null;
+  emailDeliveryStatus?: "pending" | "draft" | null;
 };
 
 async function insertMessage(input: InsertMessageInput): Promise<MessageDbRow> {
@@ -196,6 +226,7 @@ async function loadAgentReplyContext(ticketId: string) {
         .eq("ticket_id", ticketId)
         .eq("author_type", "customer")
         .eq("visibility", "public")
+        .or(PUBLIC_NON_DRAFT_FILTER)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -204,6 +235,7 @@ async function loadAgentReplyContext(ticketId: string) {
         .select("*")
         .eq("ticket_id", ticketId)
         .eq("visibility", "public")
+        .or(PUBLIC_NON_DRAFT_FILTER)
         .not("email_subject", "is", null)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -295,6 +327,270 @@ export async function createAgentReply(
   }
 
   return { message, ticket: ticketRow, shouldSendEmail };
+}
+
+export async function createAgentDraft(
+  ticketId: string,
+  input: {
+    body: string;
+    channel?: "email" | "api" | "admin";
+    email?: {
+      cc?: string[];
+      subject?: string;
+      reply_all?: boolean;
+      include_quote?: boolean;
+      attachment_upload_ids?: string[];
+    };
+  },
+  auth: AuthContext,
+) {
+  const ticketRow = await loadMessageTicket(ticketId);
+  const channel = input.channel ?? (auth.type === "api_key" ? "api" : "admin");
+  const isEmailTicket = canSendEmail(ticketRow);
+
+  let body = input.body.trim();
+  let emailTo: string[] = [];
+  let emailCc: string[] = [];
+  let emailSubject: string | null = null;
+  let emailFrom: string | null = null;
+
+  if (isEmailTicket) {
+    const contactAddress = ticketRow.contact_address?.trim();
+    if (!contactAddress) {
+      throw ApiError.badRequest(
+        "Ticket contact address is required to save an email draft",
+      );
+    }
+
+    const replyContext = await loadAgentReplyContext(ticketId);
+    const prepared = await prepareAgentDraftReply(
+      {
+        title: ticketRow.title,
+        contact_address: contactAddress,
+      },
+      replyContext,
+      { body: input.body, email: input.email },
+    );
+
+    body = prepared.body;
+    emailFrom = prepared.emailFrom;
+    emailTo = prepared.emailTo;
+    emailCc = prepared.emailCc;
+    emailSubject = prepared.emailSubject;
+  }
+
+  const message = await insertMessage({
+    ticketId,
+    body,
+    visibility: "public",
+    authorType: "agent",
+    authorId: auth.userId,
+    channel,
+    emailFrom,
+    emailTo,
+    emailCc,
+    emailSubject,
+    emailDeliveryStatus: isEmailTicket ? "draft" : null,
+  });
+
+  if (isEmailTicket && input.email?.attachment_upload_ids?.length) {
+    await linkUploadsToMessage(
+      ticketId,
+      message.id,
+      input.email.attachment_upload_ids,
+    );
+  }
+
+  return { message };
+}
+
+async function loadDraftMessage(
+  ticketId: string,
+  messageId: string,
+): Promise<MessageDbRow> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("messages")
+    .select("*")
+    .eq("id", messageId)
+    .eq("ticket_id", ticketId)
+    .eq("email_delivery_status", EMAIL_DRAFT_STATUS)
+    .maybeSingle();
+  if (error) throw ApiError.internal(error.message);
+  if (!data) throw ApiError.notFound("Draft not found");
+  return data;
+}
+
+export async function updateAgentDraft(
+  ticketId: string,
+  messageId: string,
+  input: {
+    body: string;
+    email?: {
+      cc?: string[];
+      subject?: string;
+      reply_all?: boolean;
+      attachment_upload_ids?: string[];
+    };
+  },
+  auth: AuthContext,
+) {
+  void auth;
+  await loadDraftMessage(ticketId, messageId);
+  const ticketRow = await loadMessageTicket(ticketId);
+  const isEmailTicket = canSendEmail(ticketRow);
+
+  let body = input.body.trim();
+  let emailTo: string[] = [];
+  let emailCc: string[] = [];
+  let emailSubject: string | null = null;
+  let emailFrom: string | null = null;
+
+  if (isEmailTicket) {
+    const contactAddress = ticketRow.contact_address?.trim();
+    if (!contactAddress) {
+      throw ApiError.badRequest(
+        "Ticket contact address is required to update an email draft",
+      );
+    }
+
+    const replyContext = await loadAgentReplyContext(ticketId);
+    const prepared = await prepareAgentDraftReply(
+      {
+        title: ticketRow.title,
+        contact_address: contactAddress,
+      },
+      replyContext,
+      { body: input.body, email: input.email },
+    );
+
+    body = prepared.body;
+    emailFrom = prepared.emailFrom;
+    emailTo = prepared.emailTo;
+    emailCc = prepared.emailCc;
+    emailSubject = prepared.emailSubject;
+  }
+
+  const db = createAdminClient();
+  const { data: message, error } = await db
+    .from("messages")
+    .update({
+      body,
+      email_from: emailFrom,
+      email_to: emailTo,
+      email_cc: emailCc,
+      email_subject: emailSubject,
+    })
+    .eq("id", messageId)
+    .eq("ticket_id", ticketId)
+    .eq("email_delivery_status", EMAIL_DRAFT_STATUS)
+    .select()
+    .single();
+  if (error) throw ApiError.internal(error.message);
+
+  if (isEmailTicket && input.email?.attachment_upload_ids?.length) {
+    await linkUploadsToMessage(
+      ticketId,
+      messageId,
+      input.email.attachment_upload_ids,
+    );
+  }
+
+  await touchTicket(ticketId);
+  return { message };
+}
+
+export async function deleteAgentDraft(
+  ticketId: string,
+  messageId: string,
+  auth: AuthContext,
+) {
+  void auth;
+  await loadDraftMessage(ticketId, messageId);
+
+  const db = createAdminClient();
+  const { error } = await db
+    .from("messages")
+    .delete()
+    .eq("id", messageId)
+    .eq("ticket_id", ticketId)
+    .eq("email_delivery_status", EMAIL_DRAFT_STATUS);
+  if (error) throw ApiError.internal(error.message);
+
+  await touchTicket(ticketId);
+  return { deleted: true as const };
+}
+
+export async function sendAgentDraft(
+  ticketId: string,
+  messageId: string,
+  input: {
+    include_quote?: boolean;
+    reply_all?: boolean;
+  },
+  auth: AuthContext,
+) {
+  const ticketRow = await loadMessageTicket(ticketId);
+  if (!canSendEmail(ticketRow)) {
+    throw ApiError.badRequest("This ticket does not support email");
+  }
+
+  const draft = await loadDraftMessage(ticketId, messageId);
+  const contactAddress = ticketRow.contact_address?.trim();
+  if (!contactAddress) {
+    throw ApiError.badRequest("Ticket contact address is required to send email");
+  }
+
+  assertChannelReadyToSend("email", {
+    contact_address: contactAddress,
+    custom_fields: {},
+  });
+
+  const replyContext = await loadAgentReplyContext(ticketId);
+  const prepared = await prepareAgentOutboundReply(
+    {
+      title: ticketRow.title,
+      contact_address: contactAddress,
+    },
+    replyContext,
+    {
+      body: draft.body,
+      email: {
+        cc: (draft.email_cc ?? []) as string[],
+        subject: draft.email_subject ?? undefined,
+        reply_all: input.reply_all,
+        include_quote: input.include_quote,
+      },
+    },
+  );
+
+  assertSendRecipientMatchesLockedFields(
+    "email",
+    { contact_address: contactAddress, custom_fields: {} },
+    prepared.emailTo,
+  );
+
+  const db = createAdminClient();
+  const { data: message, error } = await db
+    .from("messages")
+    .update({
+      body: prepared.body,
+      email_from: prepared.emailFrom,
+      email_to: prepared.emailTo,
+      email_cc: prepared.emailCc,
+      email_subject: prepared.emailSubject,
+      email_delivery_status: "pending",
+      author_id: auth.userId,
+    })
+    .eq("id", messageId)
+    .eq("ticket_id", ticketId)
+    .eq("email_delivery_status", EMAIL_DRAFT_STATUS)
+    .select()
+    .single();
+  if (error) throw ApiError.internal(error.message);
+
+  await touchTicket(ticketId);
+  return { message, shouldSendEmail: true };
 }
 
 export async function createInboundCustomerMessage(

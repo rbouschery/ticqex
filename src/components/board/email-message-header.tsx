@@ -28,6 +28,10 @@ const DELIVERY_VARIANTS: Record<
     label: "Pending",
     className: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
   },
+  draft: {
+    label: "Draft",
+    className: "border-muted-foreground/30 bg-muted/60 text-muted-foreground",
+  },
 };
 
 function DeliveryBadge({ status }: { status: string }) {

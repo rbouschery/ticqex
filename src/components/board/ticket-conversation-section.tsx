@@ -13,6 +13,10 @@ function TicketConversationContent({
   ticketId,
   threadOrder,
   onSubmit,
+  onSaveDraft,
+  onUpdateDraft,
+  onSendDraft,
+  onDeleteDraft,
   saving,
   onToggleMessageRead,
 }: {
@@ -20,6 +24,14 @@ function TicketConversationContent({
   ticketId: string;
   threadOrder: EmailThreadOrder;
   onSubmit: (payload: EmailComposePayload) => Promise<void>;
+  onSaveDraft: (payload: EmailComposePayload) => Promise<void>;
+  onUpdateDraft: (id: string, payload: EmailComposePayload) => Promise<void>;
+  onSendDraft: (
+    id: string,
+    payload: EmailComposePayload,
+    includeQuote: boolean,
+  ) => Promise<void>;
+  onDeleteDraft: (id: string) => Promise<void>;
   saving: boolean;
   onToggleMessageRead: (messageId: string) => void;
 }) {
@@ -31,6 +43,10 @@ function TicketConversationContent({
       ticketId={ticketId}
       threadOrder={threadOrder}
       onSubmit={onSubmit}
+      onSaveDraft={onSaveDraft}
+      onUpdateDraft={onUpdateDraft}
+      onSendDraft={onSendDraft}
+      onDeleteDraft={onDeleteDraft}
       saving={saving}
       onToggleMessageRead={onToggleMessageRead}
     />
@@ -42,6 +58,10 @@ export function TicketConversationSection({
   ticketId,
   threadOrder,
   onSubmit,
+  onSaveDraft,
+  onUpdateDraft,
+  onSendDraft,
+  onDeleteDraft,
   saving,
   onToggleMessageRead,
 }: {
@@ -49,6 +69,14 @@ export function TicketConversationSection({
   ticketId: string;
   threadOrder: EmailThreadOrder;
   onSubmit: (payload: EmailComposePayload) => Promise<void>;
+  onSaveDraft: (payload: EmailComposePayload) => Promise<void>;
+  onUpdateDraft: (id: string, payload: EmailComposePayload) => Promise<void>;
+  onSendDraft: (
+    id: string,
+    payload: EmailComposePayload,
+    includeQuote: boolean,
+  ) => Promise<void>;
+  onDeleteDraft: (id: string) => Promise<void>;
   saving: boolean;
   onToggleMessageRead: (messageId: string) => void;
 }) {
@@ -59,6 +87,10 @@ export function TicketConversationSection({
         ticketId={ticketId}
         threadOrder={threadOrder}
         onSubmit={onSubmit}
+        onSaveDraft={onSaveDraft}
+        onUpdateDraft={onUpdateDraft}
+        onSendDraft={onSendDraft}
+        onDeleteDraft={onDeleteDraft}
         saving={saving}
         onToggleMessageRead={onToggleMessageRead}
       />

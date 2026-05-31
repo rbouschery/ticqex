@@ -65,6 +65,40 @@ export type StagedUpload = {
   storage_path: string;
 };
 
+export async function loadStagedAttachmentsForMessages(messageIds: string[]) {
+  const map = new Map<
+    string,
+    Array<{
+      id: string;
+      filename: string;
+      content_type: string;
+      size_bytes: number;
+    }>
+  >();
+  if (!messageIds.length) return map;
+
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("message_attachment_uploads")
+    .select("id, message_id, filename, content_type, size_bytes")
+    .in("message_id", messageIds);
+  if (error) throw ApiError.internal(error.message);
+
+  for (const row of data ?? []) {
+    if (!row.message_id) continue;
+    const list = map.get(row.message_id) ?? [];
+    list.push({
+      id: row.id,
+      filename: row.filename,
+      content_type: row.content_type,
+      size_bytes: row.size_bytes,
+    });
+    map.set(row.message_id, list);
+  }
+
+  return map;
+}
+
 export async function stageAttachmentUpload(
   ticketId: string,
   file: File,

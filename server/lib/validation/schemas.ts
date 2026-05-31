@@ -11,6 +11,11 @@ export const emailComposeOptionsSchema = z.object({
   attachment_upload_ids: z.array(z.string().uuid()).optional(),
 });
 
+export const sendDraftSchema = z.object({
+  include_quote: z.boolean().optional(),
+  reply_all: z.boolean().optional(),
+});
+
 export const messageInputSchema = z.object({
   body: z.string().min(1),
   channel: z.enum(["email", "api", "admin"]).optional(),

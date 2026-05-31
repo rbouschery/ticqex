@@ -17,6 +17,7 @@ import {
   messageInputSchema,
   patchSettingsSchema,
   reorderStatusesSchema,
+  sendDraftSchema,
   seedManualLaneOrdersSchema,
   toggleMessageReadSchema,
   updateCustomerSchema,
@@ -54,8 +55,13 @@ import {
   listEmailSnippets,
 } from "@server/services/email-snippets";
 import {
+  createAgentDraft,
   createAgentReply,
+  deleteAgentDraft,
+  listEnrichedDrafts,
   listEnrichedMessages,
+  sendAgentDraft,
+  updateAgentDraft,
 } from "@server/services/messages";
 import {
   markTicketMessagesRead,
@@ -336,6 +342,105 @@ export function registerTicqexTools(server: McpServer) {
       }
       return toolResult(created);
     },
+  );
+
+  registerAuthedTool(
+    server,
+    "ticqex_create_ticket_draft",
+    {
+      title: "Create Ticket Draft",
+      description:
+        "Save an agent reply as a draft without sending email. Uses the same payload as create ticket message.",
+      inputSchema: { ticket_id: uuid, message: messageInputSchema },
+    },
+    async ({ ticket_id, message }, auth) => {
+      const body = parseBody(messageInputSchema, message);
+      const { message: created } = await createAgentDraft(
+        ticket_id,
+        { body: body.body, channel: body.channel ?? "admin", email: body.email },
+        auth,
+      );
+      return toolResult(created);
+    },
+  );
+
+  registerAuthedTool(
+    server,
+    "ticqex_list_ticket_drafts",
+    {
+      title: "List Ticket Drafts",
+      description: "List unsent email drafts for a ticket.",
+      inputSchema: { ticket_id: uuid },
+    },
+    async ({ ticket_id }) => toolResult(await listEnrichedDrafts(ticket_id)),
+  );
+
+  registerAuthedTool(
+    server,
+    "ticqex_update_ticket_draft",
+    {
+      title: "Update Ticket Draft",
+      description: "Update a saved draft reply on a ticket.",
+      inputSchema: {
+        ticket_id: uuid,
+        message_id: uuid,
+        message: messageInputSchema,
+      },
+    },
+    async ({ ticket_id, message_id, message }, auth) => {
+      const body = parseBody(messageInputSchema, message);
+      const { message: updated } = await updateAgentDraft(
+        ticket_id,
+        message_id,
+        { body: body.body, email: body.email },
+        auth,
+      );
+      return toolResult(updated);
+    },
+  );
+
+  registerAuthedTool(
+    server,
+    "ticqex_send_ticket_draft",
+    {
+      title: "Send Ticket Draft",
+      description: "Send a saved draft and enqueue outbound email.",
+      inputSchema: {
+        ticket_id: uuid,
+        message_id: uuid,
+        options: sendDraftSchema.optional(),
+      },
+    },
+    async ({ ticket_id, message_id, options }, auth) => {
+      const body = parseBody(sendDraftSchema, options ?? {});
+      const { message: sent, shouldSendEmail } = await sendAgentDraft(
+        ticket_id,
+        message_id,
+        body,
+        auth,
+      );
+      if (shouldSendEmail) {
+        if (!isChannelOperational("email")) {
+          throw ApiError.serviceUnavailable(
+            "Email channel is disabled or integration is not configured",
+          );
+        }
+        enqueueChannelOutbound("email", sent.id);
+      }
+      return toolResult(sent);
+    },
+  );
+
+  registerAuthedTool(
+    server,
+    "ticqex_delete_ticket_draft",
+    {
+      title: "Delete Ticket Draft",
+      description: "Delete a saved draft reply.",
+      inputSchema: { ticket_id: uuid, message_id: uuid },
+    },
+    async ({ ticket_id, message_id }, auth) =>
+      toolResult(await deleteAgentDraft(ticket_id, message_id, auth)),
   );
 
   registerAuthedTool(

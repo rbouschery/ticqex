@@ -38,6 +38,7 @@ export async function enrichTicketsForBoard(
       .select("ticket_id, body, created_at")
       .in("ticket_id", conversationIds)
       .eq("visibility", "public")
+      .or("email_delivery_status.is.null,email_delivery_status.neq.draft")
       .order("created_at", { ascending: false });
 
     for (const msg of msgs ?? []) {

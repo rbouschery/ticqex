@@ -41,6 +41,7 @@ export function EmailCompose({
   ticketTitle,
   lastEmailMessage,
   onSubmit,
+  onSaveDraft,
   saving,
 }: {
   ticketId: string;
@@ -48,6 +49,7 @@ export function EmailCompose({
   ticketTitle: string;
   lastEmailMessage: MessageRow | null;
   onSubmit: (payload: EmailComposePayload) => Promise<void>;
+  onSaveDraft: (payload: EmailComposePayload) => Promise<void>;
   saving: boolean;
 }) {
   const [body, setBody] = useState("");
@@ -109,6 +111,26 @@ export function EmailCompose({
     }
   }
 
+  async function handleSaveDraft() {
+    if (!body.trim()) return;
+
+    const payload: EmailComposePayload = {
+      body: body.trim(),
+      email: {
+        cc,
+        subject: subject.trim() || undefined,
+        reply_all: replyAll,
+        include_quote: includeQuote,
+        attachment_upload_ids: attachments.map((a) => a.id),
+      },
+    };
+
+    await onSaveDraft(payload);
+    setBody("");
+    resetEmailFields();
+    toast.success("Draft saved");
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!body.trim()) return;
@@ -132,8 +154,8 @@ export function EmailCompose({
   return (
     <div
       className={cn(
-        "flex flex-col",
-        expanded && "max-h-[min(45vh,24rem)] min-h-0",
+        "flex min-h-0 flex-col",
+        expanded && "min-h-0 flex-1 overflow-hidden",
       )}
     >
       <button
@@ -281,7 +303,16 @@ export function EmailCompose({
         </ul>
       )}
 
-      <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex justify-end gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={saving || uploading || !body.trim()}
+          onClick={() => void handleSaveDraft()}
+        >
+          Save draft
+        </Button>
         <Button
           type="submit"
           size="sm"

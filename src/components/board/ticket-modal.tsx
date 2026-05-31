@@ -29,6 +29,10 @@ import { apiFetch, apiFetchText } from "@/lib/api-client";
 import { useTicketRealtime } from "@/hooks/use-board-realtime";
 import { useRecentTags } from "@/hooks/use-recent-tags";
 import {
+  invalidateTicketDrafts,
+  ticketDraftsQueryKey,
+} from "@/hooks/use-ticket-drafts";
+import {
   invalidateTicketMessages,
   ticketMessagesQueryKey,
 } from "@/hooks/use-ticket-messages";
@@ -342,6 +346,85 @@ export function TicketModal({
     }
   }
 
+  async function saveEmailDraft(payload: EmailComposePayload) {
+    setSaving(true);
+    setCurrentError(null);
+    try {
+      await apiFetch(`/api/v1/tickets/${ticketId}/messages/drafts`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      invalidateTicketDrafts(queryClient, ticketId);
+    } catch (err) {
+      setCurrentError(err instanceof Error ? err.message : "Save draft failed");
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateEmailDraft(id: string, payload: EmailComposePayload) {
+    setSaving(true);
+    setCurrentError(null);
+    try {
+      await apiFetch(`/api/v1/tickets/${ticketId}/messages/drafts/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      invalidateTicketDrafts(queryClient, ticketId);
+    } catch (err) {
+      setCurrentError(err instanceof Error ? err.message : "Update draft failed");
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function sendEmailDraft(
+    id: string,
+    _payload: EmailComposePayload,
+    includeQuote: boolean,
+  ) {
+    setSaving(true);
+    setCurrentError(null);
+    try {
+      await apiFetch(`/api/v1/tickets/${ticketId}/messages/drafts/${id}/send`, {
+        method: "POST",
+        body: JSON.stringify({ include_quote: includeQuote }),
+      });
+      invalidateTicketDrafts(queryClient, ticketId);
+      invalidateTicketMessages(queryClient, ticketId);
+      await queryClient.invalidateQueries({
+        queryKey: ticketSummaryQueryKey(ticketId),
+      });
+    } catch (err) {
+      setCurrentError(err instanceof Error ? err.message : "Send draft failed");
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteEmailDraft(id: string) {
+    setSaving(true);
+    setCurrentError(null);
+    try {
+      await apiFetch(`/api/v1/tickets/${ticketId}/messages/drafts/${id}`, {
+        method: "DELETE",
+      });
+      invalidateTicketDrafts(queryClient, ticketId);
+      queryClient.removeQueries({
+        queryKey: ticketDraftsQueryKey(ticketId),
+        exact: false,
+      });
+    } catch (err) {
+      setCurrentError(err instanceof Error ? err.message : "Delete draft failed");
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function sendEmailReply(payload: EmailComposePayload) {
     setSaving(true);
     setCurrentError(null);
@@ -625,6 +708,10 @@ export function TicketModal({
               ticketId={ticketId}
               threadOrder={threadOrder}
               onSubmit={sendEmailReply}
+              onSaveDraft={saveEmailDraft}
+              onUpdateDraft={updateEmailDraft}
+              onSendDraft={sendEmailDraft}
+              onDeleteDraft={deleteEmailDraft}
               saving={saving}
               onToggleMessageRead={(id) => void toggleMessageRead(id)}
             />

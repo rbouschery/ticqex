@@ -250,6 +250,7 @@ export async function getTicketForContext(id: string) {
     .select("id, body, visibility, author_type, author_id, created_at")
     .eq("ticket_id", id)
     .eq("visibility", "public")
+    .or("email_delivery_status.is.null,email_delivery_status.neq.draft")
     .order("created_at");
 
   return { ...base, messages: (messages ?? []) as ContextMessageRow[] };

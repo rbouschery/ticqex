@@ -58,7 +58,8 @@ export type EmailDeliveryStatus =
   | "delivered"
   | "bounced"
   | "failed"
-  | "pending";
+  | "pending"
+  | "draft";
 
 export type MessageRow = {
   id: string;
