@@ -19,7 +19,9 @@ function getBearerToken(request: NextRequest): string | null {
   return header.slice(7).trim();
 }
 
-async function authViaApiKey(token: string): Promise<AuthContext | null> {
+export async function authenticateApiKeyToken(
+  token: string,
+): Promise<AuthContext | null> {
   if (!token.startsWith("tq_live_")) return null;
 
   const db = createAdminClient();
@@ -136,7 +138,7 @@ export async function authenticateRequest(
 ): Promise<AuthContext> {
   const token = getBearerToken(request);
   if (token) {
-    const viaKey = await authViaApiKey(token);
+    const viaKey = await authenticateApiKeyToken(token);
     if (viaKey) return viaKey;
 
     const viaJwt = await authViaJwt(token);

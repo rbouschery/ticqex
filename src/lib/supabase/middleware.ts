@@ -1,13 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function isMcpRoute(pathname: string) {
+  return pathname === "/api/mcp" || pathname.startsWith("/api/mcp/");
+}
+
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isHealth = pathname === "/api/health";
+  const isMcp = isMcpRoute(pathname);
   const isWebhook = pathname.startsWith("/api/webhooks");
   const isApiV1 = pathname.startsWith("/api/v1");
 
-  if (isHealth || isWebhook) {
+  if (isHealth || isMcp || isWebhook) {
     return NextResponse.next({ request });
   }
 
