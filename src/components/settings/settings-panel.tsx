@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -17,6 +19,7 @@ import { EmailThreadOrderSetting } from "@/components/settings/email-thread-orde
 import { EmailSignatureForm } from "@/components/settings/email-signature-form";
 import { EmailSnippetsSection } from "@/components/settings/email-snippets-section";
 import { InboundEmailStatusSetting } from "@/components/settings/inbound-email-status-setting";
+import { McpSettingsSection } from "@/components/mcp/mcp-panel";
 import { StatusColumnsSection } from "@/components/settings/status-columns-section";
 import { TagsSection } from "@/components/settings/tags-section";
 import { ThemeSetting } from "@/components/settings/theme-setting";
@@ -52,6 +55,8 @@ type ApiKey = {
 /** Admin settings cards — keep skeleton count in sync with rendered sections below. */
 const ADMIN_SETTINGS_SECTIONS = [
   { key: "appearance" },
+  { key: "api-keys" },
+  { key: "mcp" },
   { key: "board-columns" },
   { key: "inbound-email" },
   { key: "tags" },
@@ -59,7 +64,6 @@ const ADMIN_SETTINGS_SECTIONS = [
   { key: "email-thread-order" },
   { key: "email-signature" },
   { key: "email-snippets" },
-  { key: "api-keys" },
 ] as const;
 
 function SettingsLoadingSkeleton() {
@@ -113,6 +117,26 @@ export function SettingsPanel() {
     void load();
   }, [me, load]);
 
+  const copyNewKey = useCallback(async () => {
+    if (!newKey) return;
+    if (!navigator.clipboard) {
+      const message = "Clipboard is unavailable in this browser.";
+      setError(message);
+      toast.error("Could not copy API key", { description: message });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(newKey);
+      setError(null);
+      toast.success("API key copied");
+    } catch {
+      const message = "Failed to copy API key to clipboard.";
+      setError(message);
+      toast.error("Could not copy API key", { description: message });
+    }
+  }, [newKey]);
+
   if (userLoading || !me) {
     return <SettingsLoadingSkeleton />;
   }
@@ -154,6 +178,80 @@ export function SettingsPanel() {
       )}
 
       <ThemeSetting />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>API keys</CardTitle>
+          <CardDescription>
+            Programmatic access to the Ticqex API.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ApiKeyForm
+            onCreated={(key) => {
+              setNewKey(key);
+              void load();
+            }}
+          />
+          {newKey && (
+            <Alert>
+              <AlertDescription className="space-y-2">
+                <span className="block">
+                  Copy your new key now — it won&apos;t be shown again:
+                </span>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                  <code className="min-w-0 flex-1 break-all rounded bg-muted px-2 py-1 font-mono text-xs">
+                    {newKey}
+                  </code>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      void copyNewKey();
+                    }}
+                  >
+                    Copy key
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+          {apiKeys.length > 0 ? (
+            <>
+              <Separator />
+              <ul className="space-y-2 text-sm">
+                {apiKeys.map((k) => (
+                  <li key={k.id} className="flex items-center justify-between">
+                    <span>
+                      {k.name} ({k.key_prefix}…)
+                    </span>
+                <RevokeButton
+                  id={k.id}
+                  name={k.name}
+                  keyPrefix={k.key_prefix}
+                  onRevoked={load}
+                  onError={setError}
+                />
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <div className="space-y-4">
+        <div>
+          <h2 className="font-heading text-lg font-semibold">MCP</h2>
+          <p className="text-sm text-muted-foreground">
+            Connect Ticqex to any MCP-compatible client through the native
+            Streamable HTTP endpoint.
+          </p>
+        </div>
+        <McpSettingsSection />
+      </div>
 
       {emailEnabled && <EmailThreadOrderSetting />}
 
@@ -246,43 +344,6 @@ export function SettingsPanel() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>API keys</CardTitle>
-          <CardDescription>
-            Programmatic access to the Ticqex API.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ApiKeyForm
-            onCreated={(key) => {
-              setNewKey(key);
-              void load();
-            }}
-          />
-          {newKey && (
-            <Alert>
-              <AlertDescription>
-                Copy your new key now — it won&apos;t be shown again:
-                <code className="mt-1 block break-all font-mono text-xs">
-                  {newKey}
-                </code>
-              </AlertDescription>
-            </Alert>
-          )}
-          <Separator />
-          <ul className="space-y-2 text-sm">
-            {apiKeys.map((k) => (
-              <li key={k.id} className="flex items-center justify-between">
-                <span>
-                  {k.name} ({k.key_prefix}…)
-                </span>
-                <RevokeButton id={k.id} onRevoked={load} />
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
     </div>
   );
 }
