@@ -593,6 +593,46 @@ export async function sendAgentDraft(
   return { message, shouldSendEmail: true };
 }
 
+export type CreateCustomerMessageInput = {
+  body: string;
+  authorId: string;
+  channel: "email" | "api";
+  emailMessageId?: string | null;
+  emailInReplyTo?: string | null;
+  emailFrom?: string | null;
+  emailTo?: string[];
+  emailCc?: string[];
+  emailSubject?: string | null;
+  emailBodyHtml?: string | null;
+};
+
+export async function createCustomerMessage(
+  ticketId: string,
+  input: CreateCustomerMessageInput,
+) {
+  await loadMessageTicket(ticketId);
+
+  const message = await insertMessage({
+    ticketId,
+    body: input.body,
+    visibility: "public",
+    authorType: "customer",
+    authorId: input.authorId,
+    channel: input.channel,
+    emailMessageId: input.emailMessageId
+      ? normalizeMessageId(input.emailMessageId)
+      : null,
+    emailInReplyTo: input.emailInReplyTo ?? null,
+    emailFrom: input.emailFrom ?? null,
+    emailTo: input.emailTo ?? [],
+    emailCc: input.emailCc ?? [],
+    emailSubject: input.emailSubject ?? null,
+    emailBodyHtml: input.emailBodyHtml ?? null,
+  });
+
+  return { message };
+}
+
 export async function createInboundCustomerMessage(
   ticketId: string,
   input: {
@@ -607,18 +647,11 @@ export async function createInboundCustomerMessage(
     emailBodyHtml?: string | null;
   },
 ) {
-  await loadMessageTicket(ticketId);
-
-  const message = await insertMessage({
-    ticketId,
+  return createCustomerMessage(ticketId, {
     body: input.body,
-    visibility: "public",
-    authorType: "customer",
     authorId: input.authorId,
     channel: "email",
-    emailMessageId: input.emailMessageId
-      ? normalizeMessageId(input.emailMessageId)
-      : null,
+    emailMessageId: input.emailMessageId ?? null,
     emailInReplyTo: input.emailInReplyTo ?? null,
     emailFrom: input.emailFrom,
     emailTo: input.emailTo,
@@ -626,6 +659,4 @@ export async function createInboundCustomerMessage(
     emailSubject: input.emailSubject,
     emailBodyHtml: input.emailBodyHtml ?? null,
   });
-
-  return { message };
 }

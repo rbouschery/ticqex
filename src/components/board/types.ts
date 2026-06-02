@@ -1,4 +1,5 @@
 import type { TicketChannel } from "@/types/database";
+import type { TicketOrigin } from "@shared/channels";
 
 export type {
   TicketCardBadge,
@@ -17,7 +18,7 @@ export type BoardLane = {
 type BoardTicketBase = {
   id: string;
   title: string;
-  origin: string;
+  origin: TicketOrigin;
   customer_id: string | null;
   assignee_id: string | null;
   preview: string;

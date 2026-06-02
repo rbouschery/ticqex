@@ -3,11 +3,11 @@ import {
   insertMessageExternalRef,
 } from "@server/services/message-external-refs";
 import { createAdminClient } from "@server/lib/supabase-admin";
-import { ApiError } from "@server/lib/errors";
 import { normalizeEmailSubject, normalizeMessageId } from "@server/lib/utils";
 import { findOrCreateCustomer } from "@server/services/customers";
 import { getInboundEmailStatusId } from "@server/services/statuses";
 import { createInboundCustomerMessage } from "@server/services/messages";
+import { openConversationTicket } from "@server/services/conversation-open";
 import {
   ensureEmailThread,
   findTicketByMessageHeaders,
@@ -15,7 +15,6 @@ import {
 } from "@server/services/email-threading";
 import { persistMessageAttachment } from "@server/services/attachment-uploads";
 import type { ParsedEmail } from "@shared/channels/email/transport";
-import { assertChannelFields } from "@server/channels/field-enforcement";
 
 function inboundProviderRef(parsed: ParsedEmail) {
   return parsed.providerRef?.direction === "inbound"
@@ -87,7 +86,6 @@ async function storeAttachments(
 }
 
 export async function processInboundEmail(parsed: ParsedEmail) {
-  const db = createAdminClient();
   const providerRef = inboundProviderRef(parsed);
 
   const existing = await findExistingInboundMessage(parsed);
@@ -115,56 +113,55 @@ export async function processInboundEmail(parsed: ParsedEmail) {
   }
 
   let isNew = false;
+  let messageId: string;
   if (!ticketId) {
     isNew = true;
     const statusId = await getInboundEmailStatusId();
     const contactAddress = parsed.from.trim().toLowerCase();
+    const title = normalizeEmailSubject(parsed.subject) || parsed.subject;
 
-    assertChannelFields("email", "on_create", {
-      contact_address: contactAddress,
-      custom_fields: {},
-    });
-
-    const { data: ticket, error } = await db
-      .from("tickets")
-      .insert({
-        title: normalizeEmailSubject(parsed.subject) || parsed.subject,
-        kind: "conversation",
+    const opened = await openConversationTicket({
+      origin: "email",
+      title,
+      contactAddress,
+      customerId: customer.id,
+      statusId,
+      threadSubject: parsed.subject,
+      rootMessageId: parsed.messageId,
+      firstMessage: {
+        body: parsed.body,
+        authorId: customer.id,
         channel: "email",
-        contact_address: contactAddress,
-        customer_id: customer.id,
-        status_id: statusId,
-        origin: "email",
-      })
-      .select("id")
-      .single();
-    if (error) throw ApiError.internal(error.message);
-    ticketId = ticket.id;
-
-    await ensureEmailThread(
-      ticketId,
-      parsed.subject,
-      parsed.messageId,
-    );
+        emailMessageId: parsed.messageId ?? null,
+        emailInReplyTo: parsed.inReplyTo ?? null,
+        emailFrom: formatInboundFrom(parsed),
+        emailTo: parsed.to,
+        emailCc: parsed.cc,
+        emailSubject: parsed.subject,
+        emailBodyHtml: parsed.bodyHtml ?? null,
+      },
+    });
+    ticketId = opened.ticketId;
+    messageId = opened.messageId;
   } else {
     await ensureEmailThread(ticketId, parsed.subject, parsed.messageId);
+    const { message } = await createInboundCustomerMessage(ticketId, {
+      body: parsed.body,
+      authorId: customer.id,
+      emailMessageId: parsed.messageId,
+      emailInReplyTo: parsed.inReplyTo,
+      emailFrom: formatInboundFrom(parsed),
+      emailTo: parsed.to,
+      emailCc: parsed.cc,
+      emailSubject: parsed.subject,
+      emailBodyHtml: parsed.bodyHtml ?? null,
+    });
+    messageId = message.id;
   }
-
-  const { message } = await createInboundCustomerMessage(ticketId, {
-    body: parsed.body,
-    authorId: customer.id,
-    emailMessageId: parsed.messageId,
-    emailInReplyTo: parsed.inReplyTo,
-    emailFrom: formatInboundFrom(parsed),
-    emailTo: parsed.to,
-    emailCc: parsed.cc,
-    emailSubject: parsed.subject,
-    emailBodyHtml: parsed.bodyHtml ?? null,
-  });
 
   if (providerRef) {
     await insertMessageExternalRef({
-      messageId: message.id,
+      messageId,
       provider: providerRef.provider,
       integrationKey: providerRef.integrationKey,
       direction: providerRef.direction,
@@ -174,7 +171,7 @@ export async function processInboundEmail(parsed: ParsedEmail) {
     });
   }
 
-  await storeAttachments(ticketId, message.id, parsed.attachments);
+  await storeAttachments(ticketId, messageId, parsed.attachments);
 
-  return { ticketId, messageId: message.id, isNew };
+  return { ticketId, messageId, isNew };
 }

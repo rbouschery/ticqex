@@ -1,3 +1,5 @@
+export type TicketOrigin = "manual" | "api" | "email";
+
 export type TicketCardBadgeVariant =
   | "default"
   | "outline"
@@ -41,6 +43,7 @@ export type ChannelCardTicketContext = {
   contact_address: string | null;
   custom_fields: Record<string, unknown>;
   preview?: string;
+  origin?: TicketOrigin;
 };
 
 export type ChannelCardSurfaceBuilder = {

@@ -13,6 +13,7 @@ import {
   createStatusSchema,
   createTagSchema,
   createTicketSchema,
+  createTicketMcpInputSchema,
   deleteStatusSchema,
   messageInputSchema,
   patchSettingsSchema,
@@ -99,7 +100,6 @@ import type {
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 
 type ToolExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
-type ToolInput<Schema extends ZodRawShapeCompat> = ShapeOutput<Schema>;
 type AuthedToolMetadata<Schema extends ZodRawShapeCompat> = {
   title: string;
   description: string;
@@ -107,7 +107,7 @@ type AuthedToolMetadata<Schema extends ZodRawShapeCompat> = {
   admin?: boolean;
 };
 type AuthedToolHandler<Schema extends ZodRawShapeCompat> = (
-  input: ToolInput<Schema>,
+  input: ShapeOutput<Schema>,
   auth: AuthContext,
   extra: ToolExtra,
 ) => CallToolResult | Promise<CallToolResult>;
@@ -156,7 +156,7 @@ function registerAuthedTool<Schema extends ZodRawShapeCompat>(
 ) {
   const { admin, ...toolMetadata } = metadata;
 
-  const callback = (async (input: ToolInput<Schema>, extra: ToolExtra) => {
+  const callback = (async (input: ShapeOutput<Schema>, extra: ToolExtra) => {
     const auth = authFromExtra(extra);
     if (admin) requireAdmin(auth);
     return handler(input, auth, extra);
@@ -236,10 +236,14 @@ export function registerTicqexTools(server: McpServer) {
     "ticqex_create_ticket",
     {
       title: "Create Ticket",
-      description: "Create a manual task ticket.",
-      inputSchema: createTicketSchema.shape,
+      description:
+        "Create a task ticket or an API-originated conversation ticket.",
+      inputSchema: createTicketMcpInputSchema.shape,
     },
-    async (input, auth) => toolResult(await createTicket(parseBody(createTicketSchema, input), auth)),
+    async (input, auth) => {
+      const mcpInput = parseBody(createTicketMcpInputSchema, input);
+      return toolResult(await createTicket(parseBody(createTicketSchema, mcpInput), auth));
+    },
   );
 
   registerAuthedTool(

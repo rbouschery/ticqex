@@ -1,9 +1,11 @@
+import type { TicketOrigin } from "@shared/channels";
 import type { BoardLane, BoardTicket } from "./types";
 
 export type TicketModalSeed = {
   id: string;
   title: string;
   kind: BoardTicket["kind"];
+  origin: TicketOrigin;
   unread_count: number;
   status_id: string;
   status: { id: string; name: string; color: string };
@@ -35,6 +37,7 @@ export function boardTicketToModalSeed(
     id: ticket.id,
     title: ticket.title,
     kind: ticket.kind,
+    origin: ticket.origin,
     unread_count: ticket.unread_count,
     status_id: status.id,
     status,

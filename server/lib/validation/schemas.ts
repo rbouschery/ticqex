@@ -43,8 +43,56 @@ export const createTaskTicketSchema = ticketBaseSchema.extend({
     }),
 });
 
-/** Conversations are created by inbound email only, not via API. */
-export const createTicketSchema = createTaskTicketSchema;
+export const createConversationTicketSchema = z.object({
+  kind: z.literal("conversation"),
+  title: z.string().trim().min(1),
+  contact_address: z.string().email(),
+  message: z.object({ body: z.string().min(1) }),
+  status_id: z.string().uuid().optional(),
+  assignee_id: z.string().uuid().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  custom_fields: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const createTicketSchema = z.discriminatedUnion("kind", [
+  createTaskTicketSchema,
+  createConversationTicketSchema,
+]);
+
+export const createTicketMcpInputSchema = z
+  .object({
+    ...ticketBaseSchema.shape,
+    kind: z.enum(["task", "conversation"]),
+    body: z.string().optional(),
+    customer: z
+      .object({ username: z.string() })
+      .optional()
+      .transform((c) => {
+        const username = c?.username?.trim();
+        return username ? { username } : undefined;
+      }),
+    contact_address: z.string().email().optional(),
+    message: z.object({ body: z.string().min(1).optional() }).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.kind !== "conversation") return;
+
+    if (!data.contact_address) {
+      ctx.addIssue({
+        code: "custom",
+        message: "contact_address is required for conversation tickets",
+        path: ["contact_address"],
+      });
+    }
+
+    if (!data.message?.body) {
+      ctx.addIssue({
+        code: "custom",
+        message: "message.body is required for conversation tickets",
+        path: ["message", "body"],
+      });
+    }
+  });
 
 export const updateTicketSchema = z.object({
   title: z.string().min(1).optional(),

@@ -90,7 +90,7 @@ Async email processing uses Next.js `after()` — no external job runner require
 | `pnpm ticqex init` | Interactive setup for local Supabase, env vars, channels, and integrations |
 | `pnpm config:check` | Validate `config/ticqex.config.json` bindings and required env vars |
 | `pnpm config:sync` | Validate activation JSON and print planned channel field sync (dry-run) |
-| `pnpm env:verify` | Check required env vars are set |
+| `pnpm env:verify` | Check Supabase env vars (`pnpm db:env`); use `config:check` for email/Resend |
 | `pnpm db:start` / `db:stop` / `db:reset` | Local Supabase |
 | `pnpm db:bootstrap` | Required statuses + settings (empty board) |
 | `pnpm db:env` | Sync Supabase keys → `.env.local` |
@@ -106,8 +106,7 @@ Async email processing uses Next.js `after()` — no external job runner require
 | `server/integrations/` | External provider integrations (Resend) |
 | `config/` | OSS activation config (`ticqex.config.json` — version-controlled; `ticqex.config.example.json` is the bootstrap template) |
 | `supabase/migrations/` | Database schema |
-| `enterprise/` | Commercial / hosted features (open-core boundary) |
 
 ## License
 
-Core: [MIT](./LICENSE) · Enterprise: see [`/enterprise`](./enterprise/README.md)
+[MIT](./LICENSE)

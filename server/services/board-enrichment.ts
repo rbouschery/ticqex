@@ -65,6 +65,7 @@ export async function enrichTicketsForBoard(
       contact_address: t.contact_address ?? null,
       custom_fields,
       preview,
+      origin: t.origin,
     });
 
     return {

@@ -36,7 +36,12 @@ function bodyPreview(body: string, maxLen = 120): string {
 function buildCardSurfaceForTicket(
   detail: Pick<
     TicketDetail,
-    "kind" | "channel" | "contact_address" | "custom_fields" | "card_surface"
+    | "kind"
+    | "channel"
+    | "contact_address"
+    | "custom_fields"
+    | "card_surface"
+    | "origin"
   >,
   preview: string,
 ) {
@@ -48,6 +53,7 @@ function buildCardSurfaceForTicket(
     contact_address: detail.contact_address ?? null,
     custom_fields: detail.custom_fields,
     preview,
+    origin: detail.origin,
   });
 }
 

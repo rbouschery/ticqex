@@ -1,4 +1,5 @@
 import { createAdminClient } from "@server/lib/supabase-admin";
+import { ApiError } from "@server/lib/errors";
 import {
   expandMessageIdVariants,
   normalizeEmailSubject,
@@ -28,13 +29,14 @@ export async function ensureEmailThread(
       ? normalizeMessageId(rootMessageId)
       : placeholderThreadRootId(ticketId);
 
-  const { data: existing } = await db
+  const { data: existing, error: selectError } = await db
     .from("email_threads")
     .select("id, root_message_id")
     .eq("ticket_id", ticketId)
     .order("created_at")
     .limit(1)
     .maybeSingle();
+  if (selectError) throw ApiError.internal(selectError.message);
 
   if (existing) {
     const patch: { subject: string; root_message_id?: string } = {
@@ -46,15 +48,20 @@ export async function ensureEmailThread(
     ) {
       patch.root_message_id = root;
     }
-    await db.from("email_threads").update(patch).eq("id", existing.id);
+    const { error: updateError } = await db
+      .from("email_threads")
+      .update(patch)
+      .eq("id", existing.id);
+    if (updateError) throw ApiError.internal(updateError.message);
     return;
   }
 
-  await db.from("email_threads").insert({
+  const { error: insertError } = await db.from("email_threads").insert({
     ticket_id: ticketId,
     root_message_id: root,
     subject: normalizedSubject,
   });
+  if (insertError) throw ApiError.internal(insertError.message);
 }
 
 export async function findTicketByMessageHeaders(

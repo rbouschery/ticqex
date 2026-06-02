@@ -1,11 +1,12 @@
 import { createAdminClient } from "@server/lib/supabase-admin";
 import { ApiError } from "@server/lib/errors";
+import type { TicketOrigin } from "@shared/channels/types";
+
+export type { TicketOrigin } from "@shared/channels/types";
 
 export type TicketKind = "task" | "conversation";
 
 export type TicketChannel = "email";
-
-export type TicketOrigin = "manual" | "api" | "email";
 
 /** Nested shapes from `tickets` list/detail select with joins. */
 export type TicketListCustomer = {
@@ -77,7 +78,7 @@ export type TicketRow = {
   customer_id: string | null;
   status_id: string;
   title: string;
-  origin?: string;
+  origin?: TicketOrigin;
 };
 
 export function isTaskTicket(ticket: Pick<TicketRow, "kind">): boolean {

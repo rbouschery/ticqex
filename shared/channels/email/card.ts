@@ -3,6 +3,7 @@ import {
   resolvePolicyFieldValue,
   sortPoliciesByCardPriority,
 } from "../field-policy";
+import { getConversationOriginCardBadge } from "../ticket-origin-badge";
 import { emailFieldPolicies } from "./fields";
 import type { ChannelCardTicketContext, TicketCardSurface } from "../types";
 
@@ -41,8 +42,10 @@ function buildEmailCard(context: ChannelCardTicketContext): TicketCardSurface {
     "on_create",
   );
 
+  const originBadge = getConversationOriginCardBadge(context.origin);
+
   return {
-    badges: [{ label: "Email", variant: "outline" }],
+    badges: [originBadge],
     warning_badges: missingRequired.map((field) => ({
       label: `Missing ${field.label}`,
       variant: "destructive" as const,

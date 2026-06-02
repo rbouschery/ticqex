@@ -9,7 +9,7 @@ import {
   type TicketListRow,
 } from "@server/domain/ticket";
 import { findOrCreateCustomer } from "@server/services/customers";
-import { getDefaultStatusId } from "@server/services/statuses";
+import { getDefaultStatusId, getInboundEmailStatusId } from "@server/services/statuses";
 import {
   filterTicketIdsByCustomFields,
   loadCustomFieldsMap,
@@ -23,6 +23,7 @@ import {
   formatMessageRow,
   listEnrichedMessages,
 } from "@server/services/messages";
+import { openConversationTicket } from "@server/services/conversation-open";
 import { getUnreadCountsByTicket } from "@server/services/message-reads";
 import {
   removeTicketFromAllLaneOrders,
@@ -143,6 +144,7 @@ function formatTicketListItem(
       contact_address: t.contact_address ?? null,
       custom_fields,
       preview,
+      origin: t.origin,
     }),
   };
 }
@@ -256,7 +258,14 @@ export async function getTicketForContext(id: string) {
   return { ...base, messages: (messages ?? []) as ContextMessageRow[] };
 }
 
-export async function createTicket(input: CreateTicketInput, _auth: AuthContext) {
+export async function createTicket(input: CreateTicketInput, auth: AuthContext) {
+  if (input.kind === "conversation") {
+    return createConversationTicket(input, auth);
+  }
+  return createTaskTicket(input, auth);
+}
+
+async function createTaskTicket(input: Extract<CreateTicketInput, { kind: "task" }>, _auth: AuthContext) {
   void _auth;
   const db = createAdminClient();
   const statusId =
@@ -286,6 +295,38 @@ export async function createTicket(input: CreateTicketInput, _auth: AuthContext)
   await setCustomFields(db, "ticket", ticket.id, input.custom_fields);
 
   return getTicket(ticket.id);
+}
+
+async function createConversationTicket(
+  input: Extract<CreateTicketInput, { kind: "conversation" }>,
+  _auth: AuthContext,
+) {
+  void _auth;
+  const db = createAdminClient();
+  const contactAddress = input.contact_address.trim().toLowerCase();
+  const customer = await findOrCreateCustomer(contactAddress);
+  const statusId =
+    input.status_id?.trim() || (await getInboundEmailStatusId());
+
+  const { ticketId } = await openConversationTicket({
+    origin: "api",
+    title: input.title,
+    contactAddress,
+    customerId: customer.id,
+    statusId,
+    assigneeId: input.assignee_id ?? null,
+    threadSubject: input.title,
+    firstMessage: {
+      body: input.message.body,
+      authorId: customer.id,
+      channel: "api",
+    },
+  });
+
+  if (input.tags?.length) await setTicketTags(ticketId, input.tags);
+  await setCustomFields(db, "ticket", ticketId, input.custom_fields);
+
+  return getTicket(ticketId);
 }
 
 export async function updateTicket(

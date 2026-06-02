@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { CopyIcon, DotsThreeVerticalIcon, TrashIcon } from "@phosphor-icons/react";
+import { getConversationOriginBadge } from "@shared/channels/ticket-origin-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -522,6 +523,10 @@ export function TicketModal({
   const isTask =
     (summary && isTaskSummary(summary)) ||
     displaySeed?.kind === "task";
+  const conversationOriginBadge =
+    displaySeed?.kind === "conversation"
+      ? getConversationOriginBadge(displaySeed.origin)
+      : null;
   const deleteLabel = isTask ? "Delete task" : "Delete email conversation";
   const deleteTitle = isTask ? "Delete this task?" : "Delete this email conversation?";
   const deletePermanentTitle = isTask
@@ -558,11 +563,14 @@ export function TicketModal({
                   <Badge variant="outline" className="shrink-0">
                     Ticket
                   </Badge>
-                ) : (
-                  <Badge variant="secondary" className="shrink-0">
-                    Email conversation
+                ) : conversationOriginBadge ? (
+                  <Badge
+                    variant={conversationOriginBadge.variant}
+                    className="shrink-0"
+                  >
+                    {conversationOriginBadge.label}
                   </Badge>
-                )}
+                ) : null}
                 {statusOptions.length > 0 && effectiveStatusId && (
                   <TicketStatusCombobox
                     statuses={statusOptions}

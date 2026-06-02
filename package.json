@@ -19,6 +19,7 @@
     "config:sync": "tsx --env-file=.env.local scripts/config-sync.ts",
     "supabase": "supabase",
     "test:message-reads": "tsx --env-file=.env.local scripts/test-message-reads.ts",
+    "test:api-conversation": "tsx --env-file=.env.local scripts/test-api-conversation.ts",
     "test:ticket-delete": "tsx --env-file=.env.local scripts/test-ticket-delete.ts",
     "test:board-filter": "tsx --env-file=.env.local scripts/test-board-filter.ts",
     "test:board-search": "tsx --env-file=.env.local scripts/test-board-search.ts",

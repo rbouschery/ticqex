@@ -1,10 +1,11 @@
 import type { Tag } from "@/components/tags/types";
+import type { TicketOrigin } from "@shared/channels";
 import type { TicketChannel } from "@/types/database";
 
 type TicketSummaryBase = {
   id: string;
   title: string;
-  origin: string;
+  origin: TicketOrigin;
   customer_id: string | null;
   assignee_id: string | null;
   preview: string;

@@ -134,7 +134,11 @@ export async function prepareAgentOutboundReply(
 
   let body = input.body;
 
-  if (input.email?.include_quote && lastCustomerMessage) {
+  const effectiveIncludeQuote =
+    input.email?.include_quote ??
+    lastCustomerMessage?.channel === "api";
+
+  if (effectiveIncludeQuote && lastCustomerMessage) {
     const quoteAuthor =
       contactEmail ?? String(lastCustomerMessage.email_from ?? "Customer");
     body += buildQuotedReply(
