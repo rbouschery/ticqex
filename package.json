@@ -18,17 +18,11 @@
     "config:check": "tsx --env-file=.env.local scripts/config-check.ts",
     "config:sync": "tsx --env-file=.env.local scripts/config-sync.ts",
     "supabase": "supabase",
-    "test:message-reads": "tsx --env-file=.env.local scripts/test-message-reads.ts",
-    "test:api-conversation": "tsx --env-file=.env.local scripts/test-api-conversation.ts",
-    "test:ticket-delete": "tsx --env-file=.env.local scripts/test-ticket-delete.ts",
-    "test:board-filter": "tsx --env-file=.env.local scripts/test-board-filter.ts",
-    "test:board-search": "tsx --env-file=.env.local scripts/test-board-search.ts",
-    "seed:board-load": "tsx --env-file=.env.local scripts/seed-board-load.ts",
-    "test:board-sort": "tsx --env-file=.env.local scripts/test-board-sort.ts",
-    "test:board-dnd": "tsx src/components/board/board-dnd-utils.test.ts",
-    "test:merge-lane-order": "tsx shared/board-sort/merge-lane-order.test.ts",
-    "test:channel-integration-registry": "tsx scripts/test-channel-integration-registry.ts",
-    "test:mcp": "tsx --env-file=.env.local scripts/test-mcp.ts"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "seed:board-load": "tsx --env-file=.env.local scripts/seed-board-load.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -50,8 +44,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.12.3",
-    "sonner": "^2.0.7",
     "shadcn": "^4.8.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "tw-animate-css": "^1.4.0",
     "zod": "^4.4.3"
@@ -67,7 +61,9 @@
     "supabase": "^2.100.1",
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.8"
   },
   "packageManager": "pnpm@10.33.2+sha512.a90faf6feeab71ad6c6e57f94e0fe1a12f5dcc22cd754db40ae9593eb6a3e0b6b12e3540218bb37ae083404b1f2ce6db2a4121e979829b4aff94b99f49da1cf8"
 }

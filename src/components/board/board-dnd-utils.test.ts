@@ -1,7 +1,4 @@
-/**
- * Smoke tests for board drag-and-drop helpers (no server required).
- * Run: pnpm test:board-dnd
- */
+import { describe, expect, it } from "vitest";
 import { applyTicketDrop } from "./board-dnd-utils";
 import type { BoardLane, BoardTicket } from "./types";
 
@@ -43,76 +40,46 @@ function lane(
   };
 }
 
-function assertCounts(
-  entry: BoardLane | undefined,
-  label: string,
-  tickets: number,
-  total?: number,
-) {
-  if (!entry) throw new Error(`${label}: lane missing`);
-  if (entry.tickets.length !== tickets) {
-    throw new Error(
-      `${label}: expected ${tickets} tickets, got ${entry.tickets.length}`,
-    );
-  }
-  if (entry.total_count !== total) {
-    throw new Error(
-      `${label}: expected total_count ${total ?? "undefined"}, got ${entry.total_count ?? "undefined"}`,
-    );
-  }
-}
+describe("applyTicketDrop", () => {
+  it("keeps total_count in sync with visible tickets on cross-lane move", () => {
+    const lanes = [lane("a", ["t1", "t2"], 2), lane("b", [], 0)];
+    const result = applyTicketDrop(lanes, "t1", "a", "b", 0);
 
-// Cross-lane move keeps total_count in sync with visible tickets.
-{
-  const lanes = [lane("a", ["t1", "t2"], 2), lane("b", [], 0)];
-  const result = applyTicketDrop(lanes, "t1", "a", "b", 0);
-  if (!result) throw new Error("cross-lane drop returned null");
+    expect(result).not.toBeNull();
 
-  assertCounts(
-    result.find((entry) => entry.status.id === "a"),
-    "source lane",
-    1,
-    1,
-  );
-  assertCounts(
-    result.find((entry) => entry.status.id === "b"),
-    "destination lane",
-    1,
-    1,
-  );
-}
+    const sourceLane = result!.find((entry) => entry.status.id === "a");
+    const destinationLane = result!.find((entry) => entry.status.id === "b");
 
-// Same-lane reorder leaves total_count unchanged.
-{
-  const lanes = [lane("a", ["t1", "t2", "t3"], 3), lane("b", [], 0)];
-  const result = applyTicketDrop(lanes, "t1", "a", "a", 2);
-  if (!result) throw new Error("same-lane drop returned null");
+    expect(sourceLane?.tickets).toHaveLength(1);
+    expect(sourceLane?.total_count).toBe(1);
+    expect(destinationLane?.tickets).toHaveLength(1);
+    expect(destinationLane?.total_count).toBe(1);
+  });
 
-  const laneA = result.find((entry) => entry.status.id === "a");
-  assertCounts(laneA, "reordered lane", 3, 3);
-  if (laneA?.tickets.map((entry) => entry.id).join("|") !== "t2|t1|t3") {
-    throw new Error("same-lane reorder produced wrong ticket order");
-  }
-}
+  it("leaves total_count unchanged on same-lane reorder", () => {
+    const lanes = [lane("a", ["t1", "t2", "t3"], 3), lane("b", [], 0)];
+    const result = applyTicketDrop(lanes, "t1", "a", "a", 2);
 
-// Lanes without total_count stay undefined after cross-lane move.
-{
-  const lanes = [lane("a", ["t1", "t2"]), lane("b", [])];
-  const result = applyTicketDrop(lanes, "t1", "a", "b", 0);
-  if (!result) throw new Error("cross-lane drop without totals returned null");
+    expect(result).not.toBeNull();
 
-  assertCounts(
-    result.find((entry) => entry.status.id === "a"),
-    "source lane without total",
-    1,
-    undefined,
-  );
-  assertCounts(
-    result.find((entry) => entry.status.id === "b"),
-    "destination lane without total",
-    1,
-    undefined,
-  );
-}
+    const laneA = result!.find((entry) => entry.status.id === "a");
+    expect(laneA?.tickets).toHaveLength(3);
+    expect(laneA?.total_count).toBe(3);
+    expect(laneA?.tickets.map((entry) => entry.id)).toEqual(["t2", "t1", "t3"]);
+  });
 
-console.log("board-dnd-utils: ok");
+  it("leaves total_count undefined when lanes do not track totals", () => {
+    const lanes = [lane("a", ["t1", "t2"]), lane("b", [])];
+    const result = applyTicketDrop(lanes, "t1", "a", "b", 0);
+
+    expect(result).not.toBeNull();
+
+    const sourceLane = result!.find((entry) => entry.status.id === "a");
+    const destinationLane = result!.find((entry) => entry.status.id === "b");
+
+    expect(sourceLane?.tickets).toHaveLength(1);
+    expect(sourceLane?.total_count).toBeUndefined();
+    expect(destinationLane?.tickets).toHaveLength(1);
+    expect(destinationLane?.total_count).toBeUndefined();
+  });
+});

@@ -199,7 +199,7 @@ These are separate Resend settings. Inbound needs receiving enabled; outbound ne
 
 ### Standard commands
 
-`pnpm lint`, `pnpm build`, `pnpm dev`, `pnpm env:verify`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:env`, `pnpm db:seed-admin`, `pnpm test:message-reads`.
+`pnpm lint`, `pnpm build`, `pnpm dev`, `pnpm env:verify`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:env`, `pnpm db:seed-admin`, `pnpm test`, `pnpm test:unit`, `pnpm test:integration`.
 
 ### Agent workflow: finish work locally
 
@@ -226,9 +226,9 @@ When implementing features in this cloud VM, **be proactive** — do not stop at
    **Restart the dev server yourself** — Do not tell the user to restart. After server-side, API, or config changes (or when Turbopack shows stale parse/build errors), stop and restart locally:
    Then re-run the health check before handing off. Only one `pnpm dev` at a time.
 4. **Always test the change** — Verify end-to-end before finishing:
-  - Run targeted smoke scripts when they exist (e.g. `pnpm test:message-reads` for read/unread).
+  - Run `pnpm test:unit` for fast checks; `pnpm test:integration` after `pnpm db:env` and `pnpm db:seed-admin` for DB-backed behavior.
   - For UI work, exercise the flow in the browser (login: `admin@ticqex.local` / `ticqex-admin-change-me`).
   - For API-only changes, call the routes with a real JWT (see scripts under `scripts/`).
 5. **Report what you ran** — In the PR or final message, state that migrations were applied locally and which tests passed.
 
-Add a focused script under `scripts/test-*.ts` when a feature needs repeatable verification and wire it in `package.json` if it will be reused.
+Add Vitest tests (`*.test.ts` for unit, `*.integration.test.ts` for local Supabase) when a feature needs repeatable verification.

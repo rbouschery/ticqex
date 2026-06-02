@@ -91,6 +91,7 @@ Async email processing uses Next.js `after()` — no external job runner require
 | `pnpm config:check` | Validate `config/ticqex.config.json` bindings and required env vars |
 | `pnpm config:sync` | Validate activation JSON and print planned channel field sync (dry-run) |
 | `pnpm env:verify` | Check Supabase env vars (`pnpm db:env`); use `config:check` for email/Resend |
+| `pnpm test` / `test:unit` / `test:integration` | Vitest suite (unit: no DB; integration: local Supabase + seed admin) |
 | `pnpm db:start` / `db:stop` / `db:reset` | Local Supabase |
 | `pnpm db:bootstrap` | Required statuses + settings (empty board) |
 | `pnpm db:env` | Sync Supabase keys → `.env.local` |
