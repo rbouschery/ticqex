@@ -96,6 +96,21 @@ Async email processing uses Next.js `after()` — no external job runner require
 | `pnpm db:bootstrap` | Required statuses + settings (empty board) |
 | `pnpm db:env` | Sync Supabase keys → `.env.local` |
 | `pnpm db:seed-admin` | Optional: create local admin user |
+| `pnpm test` | Run all Vitest projects (unit + integration) |
+| `pnpm test:unit` | Fast unit tests (no database) |
+| `pnpm test:integration` | Service-level tests (requires local Supabase; see below) |
+| `pnpm seed:board-load` | Optional: large board dataset for manual load testing |
+
+### Tests
+
+Unit tests run without Supabase. Integration tests call `server/services` directly (not HTTP), except the MCP route test which needs a dev server on `LOCAL_APP_URL` (default `http://127.0.0.1:3000`).
+
+```bash
+pnpm test:unit
+pnpm db:start && pnpm db:env && pnpm db:seed-admin && pnpm test:integration
+```
+
+Set `SKIP_MCP_INTEGRATION=1` to skip the MCP HTTP test when `pnpm dev` is not running.
 
 ## Project layout
 
