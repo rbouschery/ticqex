@@ -1,10 +1,16 @@
+import { Suspense } from "react";
 import { AppShell } from "@/components/layout/app-shell";
-import { SettingsPanel } from "@/components/settings/settings-panel";
+import {
+  SettingsLoadingSkeleton,
+  SettingsPanel,
+} from "@/components/settings/settings-panel";
 
 export default function SettingsPage() {
   return (
     <AppShell>
-      <SettingsPanel />
+      <Suspense fallback={<SettingsLoadingSkeleton />}>
+        <SettingsPanel />
+      </Suspense>
     </AppShell>
   );
 }

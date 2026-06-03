@@ -1,5 +1,6 @@
 export { emailCardSurface } from "./card";
 export { emailFieldPolicies } from "./fields";
+export { emailSettingsSections } from "./settings-sections";
 export type {
   EmailAttachment,
   EmailDeliveryEvent,

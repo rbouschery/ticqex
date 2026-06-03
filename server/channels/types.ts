@@ -3,6 +3,7 @@ import type {
   ChannelCardSurfaceBuilder,
   ChannelFieldPolicy,
 } from "@shared/channels";
+import type { ChannelSettingsSectionMeta } from "@shared/settings/types";
 
 export type { ChannelKey, IntegrationKey } from "@shared/ticqex-keys";
 
@@ -65,4 +66,8 @@ export type ChannelDefinition<
   inbound: ChannelInboundHandler<TInbound>;
   outbound: ChannelOutboundHandler;
   deliveryEvents: ChannelDeliveryEventHandler<TDeliveryPayload, TDeliveryResult>;
+  /** Serializable admin settings nav metadata; UI maps componentKey locally. */
+  settings?: {
+    sections: readonly ChannelSettingsSectionMeta[];
+  };
 };

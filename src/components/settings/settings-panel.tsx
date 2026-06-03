@@ -1,35 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApiKeyForm, RevokeButton } from "@/components/settings/api-key-form";
-import { CustomFieldsSection } from "@/components/settings/custom-fields-section";
-import { EmailThreadOrderSetting } from "@/components/settings/email-thread-order-setting";
-import { EmailSignatureForm } from "@/components/settings/email-signature-form";
-import { EmailSnippetsSection } from "@/components/settings/email-snippets-section";
-import { InboundEmailStatusSetting } from "@/components/settings/inbound-email-status-setting";
-import { McpSettingsSection } from "@/components/mcp/mcp-panel";
-import { StatusColumnsSection } from "@/components/settings/status-columns-section";
-import { TagsSection } from "@/components/settings/tags-section";
+import { SettingsLayout } from "@/components/settings/settings-layout";
+import { SettingsSectionContent } from "@/components/settings/settings-section-content";
 import { ThemeSetting } from "@/components/settings/theme-setting";
 import { apiFetch } from "@/lib/api-client";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import {
+  CORE_SETTINGS_SECTIONS,
+  NON_ADMIN_SETTINGS_SECTIONS,
+} from "@shared/settings/core-sections";
+import { resolveSettingsSectionId } from "@shared/settings/resolve";
+import type { SettingsSectionDescriptor } from "@shared/settings/types";
 
 type Settings = {
-  show_contact_on_ticket: boolean;
-  show_assignee_on_ticket: boolean;
-  show_body_on_ticket: boolean;
   email_signature?: string;
   channels?: {
     email?: {
@@ -37,7 +30,9 @@ type Settings = {
       integration: string | null;
     };
   };
+  sections?: SettingsSectionDescriptor[];
 };
+
 type ApiKey = {
   id: string;
   name: string;
@@ -45,65 +40,116 @@ type ApiKey = {
   created_at: string;
 };
 
-/** Admin settings cards — keep skeleton count in sync with rendered sections below. */
-const ADMIN_SETTINGS_SECTIONS = [
-  { key: "appearance" },
-  { key: "api-keys" },
-  { key: "mcp" },
-  { key: "board-columns" },
-  { key: "inbound-email" },
-  { key: "tags" },
-  { key: "custom-fields" },
-  { key: "email-thread-order" },
-  { key: "email-signature" },
-  { key: "email-snippets" },
-] as const;
+const SKELETON_SECTION_COUNT = CORE_SETTINGS_SECTIONS.length + 1;
 
-function SettingsLoadingSkeleton() {
+export function SettingsLoadingSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-32" />
-        <Skeleton className="h-4 w-72" />
+    <div className="mx-auto w-full max-w-[1600px] px-4 py-6">
+      <div className="flex flex-col gap-6 lg:flex-row lg:gap-10">
+        <aside className="w-full shrink-0 space-y-1 lg:w-52">
+          <Skeleton className="mb-2 h-3 w-16" />
+          {Array.from({ length: SKELETON_SECTION_COUNT }, (_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </aside>
+        <div className="flex min-w-0 flex-1 justify-center">
+          <div className="w-full max-w-3xl space-y-6">
+            <div className="space-y-2">
+              <Skeleton className="h-7 w-40" />
+              <Skeleton className="h-4 w-72" />
+            </div>
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-64" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-24 w-full" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
-      {ADMIN_SETTINGS_SECTIONS.map(({ key }) => (
-        <Card key={key}>
-          <CardHeader>
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-4 w-64" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-24 w-full" />
-          </CardContent>
-        </Card>
-      ))}
     </div>
   );
 }
 
-export function SettingsPanel() {
+function SettingsPanelBody() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user: me, loading: userLoading } = useCurrentUser();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const isAdmin = me?.role === "admin";
+
   const load = useCallback(async () => {
-    if (!me || me.role !== "admin") return;
+    if (!isAdmin) return;
     try {
       const g = await apiFetch<Settings>("/api/v1/settings");
       setSettings(g);
       setApiKeys(await apiFetch<ApiKey[]>("/api/v1/api-keys"));
+      setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load settings");
     }
-  }, [me]);
+  }, [isAdmin]);
 
   useEffect(() => {
-    if (!me || me.role !== "admin") return;
+    if (!isAdmin) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load admin settings on mount
     void load();
-  }, [me, load]);
+  }, [isAdmin, load]);
+
+  const sectionParam = searchParams.get("section");
+
+  const sections = useMemo(() => {
+    if (!isAdmin) return NON_ADMIN_SETTINGS_SECTIONS;
+    if (settings?.sections?.length) return settings.sections;
+    return CORE_SETTINGS_SECTIONS;
+  }, [isAdmin, settings?.sections]);
+
+  const activeSectionId = useMemo(
+    () => resolveSettingsSectionId(sections, sectionParam),
+    [sections, sectionParam],
+  );
+
+  const activeSection = useMemo(
+    () => sections.find((section) => section.id === activeSectionId) ?? null,
+    [sections, activeSectionId],
+  );
+
+  useEffect(() => {
+    // Before /users/me resolves, isAdmin is false and sections is appearance-only;
+    // syncing early would strip ?section=board (etc.) from the URL.
+    if (userLoading) return;
+    // Before GET /settings, admin sections omit channel sections (e.g. email).
+    if (isAdmin && settings === null) return;
+    if (sections.length === 0) return;
+
+    if (sectionParam && sections.some((section) => section.id === sectionParam)) {
+      return;
+    }
+
+    const resolved = resolveSettingsSectionId(sections, sectionParam);
+    if (sectionParam === resolved) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("section", resolved);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [
+    userLoading,
+    isAdmin,
+    settings,
+    sections,
+    sectionParam,
+    pathname,
+    router,
+    searchParams,
+  ]);
 
   const copyNewKey = useCallback(async () => {
     if (!newKey) return;
@@ -129,206 +175,62 @@ export function SettingsPanel() {
     return <SettingsLoadingSkeleton />;
   }
 
-  if (me.role !== "admin") {
+  if (!isAdmin) {
+    const appearance = NON_ADMIN_SETTINGS_SECTIONS[0];
     return (
-      <div className="mx-auto max-w-3xl space-y-6 p-6">
-        <div>
-          <h1 className="font-heading text-xl font-semibold">Settings</h1>
-          <p className="text-sm text-muted-foreground">
-            Personal preferences for your account.
-          </p>
-        </div>
-        <ThemeSetting />
+      <SettingsLayout
+        sections={[...NON_ADMIN_SETTINGS_SECTIONS]}
+        activeSectionId={activeSectionId}
+        title="Settings"
+      >
+        {activeSectionId === appearance.id ? <ThemeSetting /> : null}
         <Alert>
           <AlertDescription>
             Organization settings require an admin account.
           </AlertDescription>
         </Alert>
-      </div>
+      </SettingsLayout>
     );
   }
 
-  const emailEnabled = settings?.channels?.email?.enabled === true;
+  if (!settings || !activeSection) {
+    return <SettingsLoadingSkeleton />;
+  }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <div>
-        <h1 className="font-heading text-xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage appearance, board columns, tags, and integrations.
-        </p>
-      </div>
-
+    <SettingsLayout
+      sections={sections}
+      activeSectionId={activeSectionId}
+      title="Settings"
+    >
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      <ThemeSetting />
+      <SettingsSectionContent
+        section={activeSection}
+        settings={settings}
+        apiKeys={apiKeys}
+        newKey={newKey}
+        onNewKey={setNewKey}
+        onReload={() => {
+          void load();
+        }}
+        onCopyNewKey={() => {
+          void copyNewKey();
+        }}
+        onError={setError}
+      />
+    </SettingsLayout>
+  );
+}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>API keys</CardTitle>
-          <CardDescription>
-            Programmatic access to the Ticqex API.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ApiKeyForm
-            onCreated={(key) => {
-              setNewKey(key);
-              void load();
-            }}
-          />
-          {newKey && (
-            <Alert>
-              <AlertDescription className="space-y-2">
-                <span className="block">
-                  Copy your new key now — it won&apos;t be shown again:
-                </span>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                  <code className="min-w-0 flex-1 break-all rounded bg-muted px-2 py-1 font-mono text-xs">
-                    {newKey}
-                  </code>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => {
-                      void copyNewKey();
-                    }}
-                  >
-                    Copy key
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-          {apiKeys.length > 0 ? (
-            <>
-              <Separator />
-              <ul className="space-y-2 text-sm">
-                {apiKeys.map((k) => (
-                  <li key={k.id} className="flex items-center justify-between">
-                    <span>
-                      {k.name} ({k.key_prefix}…)
-                    </span>
-                <RevokeButton
-                  id={k.id}
-                  name={k.name}
-                  keyPrefix={k.key_prefix}
-                  onRevoked={load}
-                  onError={setError}
-                />
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <div className="space-y-4">
-        <div>
-          <h2 className="font-heading text-lg font-semibold">MCP</h2>
-          <p className="text-sm text-muted-foreground">
-            Connect Ticqex to any MCP-compatible client through the native
-            Streamable HTTP endpoint.
-          </p>
-        </div>
-        <McpSettingsSection />
-      </div>
-
-      {emailEnabled && <EmailThreadOrderSetting />}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Board columns</CardTitle>
-          <CardDescription>
-            Drag to reorder lanes, pick colors, rename statuses, and choose
-            board visibility.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <StatusColumnsSection />
-        </CardContent>
-      </Card>
-
-      {emailEnabled && (
-        <Card>
-          <CardHeader>
-            <CardTitle>New inbound emails</CardTitle>
-            <CardDescription>
-              Status assigned when an email creates a new ticket. Defaults to the
-              first board column in order.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <InboundEmailStatusSetting />
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Tags</CardTitle>
-          <CardDescription>
-            Organization-wide labels with colors shown on board cards and ticket
-            views.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TagsSection />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Custom fields</CardTitle>
-          <CardDescription>
-            Define typed metadata fields for tickets and contacts. Values are
-            set through the API and MCP agents.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CustomFieldsSection />
-        </CardContent>
-      </Card>
-
-      {settings && emailEnabled && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Email signature</CardTitle>
-            <CardDescription>
-              Appended to outbound email replies sent from the ticket view.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EmailSignatureForm
-              key={settings.email_signature ?? ""}
-              signature={settings.email_signature ?? ""}
-              onSaved={load}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {me.role === "admin" && emailEnabled && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Email snippets</CardTitle>
-            <CardDescription>
-              Canned responses available in the ticket email compose snippet picker.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EmailSnippetsSection />
-          </CardContent>
-        </Card>
-      )}
-
-    </div>
+export function SettingsPanel() {
+  return (
+    <Suspense fallback={<SettingsLoadingSkeleton />}>
+      <SettingsPanelBody />
+    </Suspense>
   );
 }

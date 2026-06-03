@@ -3,6 +3,7 @@ import {
   emailCardSurface,
   emailFieldPolicies,
 } from "@shared/channels/email";
+import { emailSettingsSections } from "@shared/channels/email/settings-sections";
 import { emailInboundHandler } from "@server/channels/email/inbound";
 import { emailOutboundHandler } from "@server/channels/email/outbound";
 import { emailDeliveryHandler } from "@server/channels/email/delivery";
@@ -28,4 +29,7 @@ export const emailChannel: ChannelDefinition<
   inbound: emailInboundHandler,
   outbound: emailOutboundHandler,
   deliveryEvents: emailDeliveryHandler,
+  settings: {
+    sections: emailSettingsSections,
+  },
 };
