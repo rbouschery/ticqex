@@ -38,6 +38,9 @@ const VERCEL_SENSITIVE_ENV_KEYS = new Set<string>([
   "SEED_ADMIN_PASSWORD",
 ]);
 
+/** Vercel targets for cloud deploy env sync (Development rejects --sensitive). */
+const VERCEL_SYNC_ENV_TARGETS = ["production", "preview"] as const;
+
 type VercelProjectLink = {
   projectId?: string;
   orgId?: string;
@@ -532,7 +535,7 @@ export function pushEnvToVercel(
       ? ["--sensitive"]
       : ["--no-sensitive"];
 
-    for (const target of ["production", "preview", "development"] as const) {
+    for (const target of VERCEL_SYNC_ENV_TARGETS) {
       runVercel(
         appendVercelScope(
           [

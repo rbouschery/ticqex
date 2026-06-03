@@ -588,7 +588,7 @@ async function syncCloudDeployEnvToVercel(
     const pushed = pushEnvToVercel(cloudDeployEnv, vercelScope);
     rl = createReadline();
     if (pushed.length) {
-      console.log("\nSynced env vars to Vercel (production, preview, development):");
+      console.log("\nSynced env vars to Vercel (production, preview):");
       for (const key of pushed) {
         console.log(`  ${key}`);
       }

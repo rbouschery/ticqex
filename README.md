@@ -65,7 +65,7 @@ pnpm ticqex init
 
 **Supabase (local or cloud):** choose `local` to start Docker Supabase, sync keys to `.env.local`, and optionally seed an admin user; choose `cloud` to link a Supabase project, push migrations, bootstrap statuses/settings, fetch cloud API keys into `.env.local`, and optionally create a cloud admin user (email + password).
 
-**Vercel (cloud flow):** after channel/env setup, init can link an existing Vercel project or create and link a new one, pull the production URL into `NEXT_PUBLIC_APP_URL`, and sync env vars to Vercel (production, preview, development) via the Vercel CLI.
+**Vercel (cloud flow):** after channel/env setup, init can link an existing Vercel project or create and link a new one, pull the production URL into `NEXT_PUBLIC_APP_URL`, and sync env vars to Vercel (production and preview) via the Vercel CLI.
 
 **Default:** the email channel and Resend integration stay **on** (`config/ticqex.config.json`). With email enabled, you need a Resend API key (`re_…` from the [Resend dashboard](https://resend.com/api-keys)). Init defaults `NEXT_PUBLIC_APP_URL` to `http://localhost:3000` for the admin UI. **Inbound email locally requires an HTTPS tunnel** — init explains this and lets you start **ngrok** (`ngrok http 3000`, reused if already running) or paste a tunnel URL (Cloudflare, etc.), then optionally register Resend webhooks via API. You also set support sender email/name.
 
@@ -317,7 +317,7 @@ Keep email enabled unless you are skipping mail.
    vercel git connect
    ```
 
-4. Set **all** runtime env vars on Vercel (Dashboard → Project → Settings → Environment Variables, or `vercel env add`). Apply to **Production**, **Preview**, and **Development** as appropriate:
+4. Set **all** runtime env vars on Vercel (Dashboard → Project → Settings → Environment Variables, or `vercel env add`). Apply to **Production** and **Preview** (sensitive vars are not supported on Development):
 
    | Variable | Value |
    |----------|--------|
