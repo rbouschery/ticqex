@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -88,19 +87,13 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
     viewNarrowedActive,
   } = useBoardView();
 
-  const [querySort, setQuerySort] = useState(sort);
-
-  useEffect(() => {
-    setQuerySort(sort);
-  }, [sort]);
-
   const skeletonLaneCount = useSyncExternalStore(
     () => () => {},
     () => readLastBoardLaneCount(),
     () => DEFAULT_BOARD_LANE_COUNT,
   );
 
-  const boardQuery = useBoardQuery(filter, querySort, searchQuery);
+  const boardQuery = useBoardQuery(filter, sort, searchQuery);
   const lanes = boardQuery.data?.lanes ?? EMPTY_LANES;
   const ticketFieldLayout = boardQuery.data?.ticket_field_layout ?? null;
   const capped = boardQuery.data?.capped ?? false;
@@ -108,7 +101,7 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
 
   const { loadMore, loadingLaneIds } = useBoardLaneLoadMore({
     filter,
-    sort: querySort,
+    sort,
     searchQuery,
     searchActive,
   });
@@ -198,7 +191,7 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
       const startLanes = lanes;
       const toLane = startLanes.find((lane) => lane.status.id === toStatusId);
       const insertIndex = statusChangeInsertIndex(
-        querySort,
+        sort,
         toLane?.tickets.length ?? 0,
       );
       const touchedAt = new Date().toISOString();
@@ -225,7 +218,7 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
       const finalLanes = optimistic ?? startLanes;
       const crossLane = fromStatusId !== toStatusId;
       const targetIds = statusChangeTargetIds(
-        querySort,
+        sort,
         ticketId,
         visibleIdsForLane(finalLanes, toStatusId),
       );
@@ -253,7 +246,7 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
           : {}),
       });
     },
-    [lanes, querySort, setLanes, subsetActive],
+    [lanes, sort, setLanes, subsetActive],
   );
 
   const patchTicketUnread = useCallback(
@@ -306,14 +299,12 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
         }
       }
       setSort(next);
-      setQuerySort(next);
     },
     [lanes, setSort, sort.mode, subsetActive],
   );
 
   const onDragCommitManual = useCallback(() => {
     setSort(MANUAL_SORT);
-    setQuerySort(MANUAL_SORT);
   }, [setSort]);
 
   const {
@@ -357,7 +348,7 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
       if (showOptimistic) {
         dragSessionRef.current.mutedUntil = Date.now() + REALTIME_MUTE_MS;
         setLanes((current) =>
-          insertNewTicketIntoLane(current, payload.statusId, optimistic, querySort),
+          insertNewTicketIntoLane(current, payload.statusId, optimistic, sort),
         );
       }
 
@@ -411,7 +402,7 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
       dragSessionRef,
       filter,
       queryClient,
-      querySort,
+      sort,
       searchActive,
       searchQuery,
       setLanes,

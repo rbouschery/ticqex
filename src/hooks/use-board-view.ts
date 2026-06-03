@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import {
   normalizeTicketFilter,
   ticketFilterSchema,
@@ -97,35 +97,53 @@ function writeStoredView(view: BoardViewState) {
   );
 }
 
-export function useBoardView() {
-  const [view, setViewState] = useState<BoardViewState>(DEFAULT_BOARD_VIEW);
+const boardViewListeners = new Set<() => void>();
 
-  useEffect(() => {
-    setViewState(readStoredView());
-  }, []);
+function subscribeBoardView(listener: () => void) {
+  boardViewListeners.add(listener);
+  if (typeof window === "undefined") {
+    return () => boardViewListeners.delete(listener);
+  }
+
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY || event.key === LEGACY_FILTER_KEY) {
+      listener();
+    }
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    boardViewListeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+function emitBoardViewChange() {
+  for (const listener of boardViewListeners) listener();
+}
+
+export function useBoardView() {
+  const view = useSyncExternalStore(
+    subscribeBoardView,
+    readStoredView,
+    () => DEFAULT_BOARD_VIEW,
+  );
 
   const setFilter = useCallback((filter: TicketFilter) => {
-    setViewState((prev) => {
-      const next = { ...prev, filter };
-      writeStoredView(next);
-      return next;
-    });
+    const next = { ...readStoredView(), filter };
+    writeStoredView(next);
+    emitBoardViewChange();
   }, []);
 
   const setSort = useCallback((sort: BoardSort) => {
-    setViewState((prev) => {
-      const next = { ...prev, sort };
-      writeStoredView(next);
-      return next;
-    });
+    const next = { ...readStoredView(), sort };
+    writeStoredView(next);
+    emitBoardViewChange();
   }, []);
 
   const setSearchQuery = useCallback((searchQuery: string) => {
-    setViewState((prev) => {
-      const next = { ...prev, searchQuery };
-      writeStoredView(next);
-      return next;
-    });
+    const next = { ...readStoredView(), searchQuery };
+    writeStoredView(next);
+    emitBoardViewChange();
   }, []);
 
   const searchActive = view.searchQuery.trim().length > 0;
