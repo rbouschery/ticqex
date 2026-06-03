@@ -4,7 +4,7 @@ import {
   setEnvLine,
   writeEnvFile,
 } from "./env-file";
-import { runPnpm, runSupabase, runSupabaseCapture } from "./run-command";
+import { runSeedAdmin, runSupabase, runSupabaseCapture } from "./run-command";
 import {
   isUsableSupabasePublishableKey,
   isUsableSupabaseSecretKey,
@@ -148,12 +148,10 @@ export function seedCloudAdmin(
 ): void {
   target.SEED_ADMIN_EMAIL = email;
   target.SEED_ADMIN_PASSWORD = password;
-  runPnpm(["db:seed-admin"], {
-    env: {
-      NEXT_PUBLIC_SUPABASE_URL: keys.url,
-      SUPABASE_SECRET_KEY: keys.secretKey,
-      SEED_ADMIN_EMAIL: email,
-      SEED_ADMIN_PASSWORD: password,
-    },
+  runSeedAdmin({
+    NEXT_PUBLIC_SUPABASE_URL: keys.url,
+    SUPABASE_SECRET_KEY: keys.secretKey,
+    SEED_ADMIN_EMAIL: email,
+    SEED_ADMIN_PASSWORD: password,
   });
 }

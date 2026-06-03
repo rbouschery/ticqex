@@ -9,6 +9,8 @@ import { stdin as input, stdout as output } from "node:process";
 const ROOT = path.resolve(import.meta.dirname, "../..");
 
 export const SUPABASE_BIN = path.join(ROOT, "node_modules", ".bin", "supabase");
+const TSX_BIN = path.join(ROOT, "node_modules", ".bin", "tsx");
+const SEED_SCRIPT = path.join(ROOT, "scripts", "seed.ts");
 
 export function createReadline(): ReadlineInterface {
   return createInterface({ input, output });
@@ -63,6 +65,22 @@ export function runPnpm(
   }
   if (result.status !== 0) {
     throw new Error(`pnpm ${args.join(" ")} failed`);
+  }
+}
+
+export function runSeedAdmin(env: Record<string, string> = {}): void {
+  console.log("\n> tsx scripts/seed.ts");
+  const result = spawnSync(TSX_BIN, [SEED_SCRIPT], {
+    cwd: ROOT,
+    stdio: "inherit",
+    env: { ...process.env, ...env },
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error("tsx scripts/seed.ts failed");
   }
 }
 

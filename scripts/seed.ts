@@ -4,13 +4,20 @@
  *
  * Env: SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD (defaults for local dev)
  */
-import "dotenv/config";
+import dotenv from "dotenv";
+import fs from "node:fs";
+import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import {
   formatSupabaseAuthError,
   normalizeSupabaseUrl,
   validateSupabaseSeedEnv,
 } from "./lib/supabase-env";
+
+const envLocal = path.resolve(import.meta.dirname, "../.env.local");
+if (fs.existsSync(envLocal)) {
+  dotenv.config({ path: envLocal });
+}
 
 const email = process.env.SEED_ADMIN_EMAIL ?? "admin@ticqex.local";
 const password = process.env.SEED_ADMIN_PASSWORD ?? "ticqex-admin-change-me";

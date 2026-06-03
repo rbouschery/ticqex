@@ -293,7 +293,7 @@ async function setupSupabase(
     const confirmed = await promptYesNo(
       rl,
       "Reset wipes the local Supabase database. Continue?",
-      false,
+      true,
     );
     if (!confirmed) return { rl, usedCloudSupabase: false };
     closeReadline(rl);
@@ -313,7 +313,7 @@ async function setupSupabase(
   const seedAdmin = await promptYesNo(
     rl,
     "Seed the local admin user now?",
-    mode !== "skip",
+    true,
   );
   if (seedAdmin) {
     runPnpm(["db:seed-admin"]);
@@ -340,31 +340,29 @@ async function setupCloudSupabase(
   runSupabase(["link", "--project-ref", projectRef, "--yes"]);
 
   let activeRl = createReadline();
-  let migrationsPushed = false;
   const pushMigrations = await promptYesNo(
     activeRl,
     "Push local migrations to the linked cloud project?",
-    false,
+    true,
   );
   if (pushMigrations) {
     const confirmed = await promptYesNo(
       activeRl,
       "This writes schema changes to the linked cloud database. Continue?",
-      false,
+      true,
     );
     if (confirmed) {
       closeReadline(activeRl);
       // Init already confirmed; --yes plus closed readline so the CLI owns stdin.
       runSupabase(["db", "push", "--linked", "--yes"], { input: "y\n" });
       activeRl = createReadline();
-      migrationsPushed = true;
     }
   }
 
   const bootstrapDb = await promptYesNo(
     activeRl,
     "Bootstrap cloud database (statuses + settings)?",
-    migrationsPushed,
+    true,
   );
   if (bootstrapDb) {
     closeReadline(activeRl);
@@ -425,7 +423,7 @@ async function setupCloudSupabase(
   const seedAdmin = await promptYesNo(
     activeRl,
     "Create an admin user in cloud Supabase?",
-    false,
+    true,
   );
   if (seedAdmin) {
     const email = await prompt(activeRl, "Admin email");
@@ -504,7 +502,7 @@ async function setupVercelDeployment(
   const linkVercel = await promptYesNo(
     rl,
     "\nLink this repo to a Vercel project and sync env vars?",
-    false,
+    true,
   );
   if (!linkVercel) return rl;
 
@@ -519,7 +517,7 @@ async function setupVercelDeployment(
     const projectExists = await promptYesNo(
       rl,
       "Does a Vercel project already exist for this app?",
-      false,
+      true,
     );
 
     const defaultName = defaultVercelProjectName();
@@ -672,7 +670,7 @@ async function configureChannelsAndIntegrations(
       (await promptYesNo(
         rl,
         `Create Resend webhooks via API (saves signing secrets to ${envTargetLabel})?`,
-        !hasInboundSecret,
+        true,
       ));
 
     if (provisionWebhooks && webhookAppUrl) {
