@@ -1,6 +1,13 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { readGitOriginRemote, runVercel, sleepMs } from "./run-command";
+import {
+  gitBranchExists,
+  readGitCurrentBranch,
+  readGitOriginRemote,
+  runVercel,
+  sleepMs,
+} from "./run-command";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const VERCEL_DIR = path.join(ROOT, ".vercel");
@@ -256,6 +263,112 @@ export function resolveVercelProductionUrl(
   return name ? defaultVercelProjectUrl(name) : null;
 }
 
+export function resolveGitProductionBranch(
+  currentBranch: string | null = readGitCurrentBranch(),
+): string {
+  if (currentBranch === "main" || currentBranch === "master") {
+    return currentBranch;
+  }
+
+  if (gitBranchExists("main")) {
+    return "main";
+  }
+
+  if (gitBranchExists("master")) {
+    return "master";
+  }
+
+  return currentBranch ?? "main";
+}
+
+function readVercelAuthToken(): string | null {
+  const envToken = process.env.VERCEL_TOKEN?.trim();
+  if (envToken) {
+    return envToken;
+  }
+
+  const authPaths = [
+    path.join(os.homedir(), "Library", "Application Support", "com.vercel.cli", "auth.json"),
+    path.join(os.homedir(), ".local", "share", "com.vercel.cli", "auth.json"),
+    path.join(
+      os.homedir(),
+      "AppData",
+      "Roaming",
+      "xdg.data",
+      "com.vercel.cli",
+      "auth.json",
+    ),
+  ];
+
+  for (const authPath of authPaths) {
+    if (!fs.existsSync(authPath)) continue;
+    try {
+      const parsed = JSON.parse(fs.readFileSync(authPath, "utf8")) as {
+        token?: string;
+      };
+      const token = parsed.token?.trim();
+      if (token) return token;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+export async function setVercelProductionBranch(
+  branch: string,
+  scope?: string,
+): Promise<boolean> {
+  const link = readVercelProjectLink();
+  if (!link?.projectId) {
+    return false;
+  }
+
+  const token = readVercelAuthToken();
+  if (!token) {
+    console.log(
+      "\nCould not set Vercel production branch automatically. Set it in Project Settings → Environments → Production.",
+    );
+    return false;
+  }
+
+  const url = new URL(
+    `https://api.vercel.com/v9/projects/${encodeURIComponent(link.projectId)}/branch`,
+  );
+  if (link.orgId) {
+    url.searchParams.set("teamId", link.orgId);
+  } else if (scope) {
+    url.searchParams.set("slug", scope);
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ branch }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      console.log(
+        `\nCould not set Vercel production branch to ${branch}: ${body || response.statusText}`,
+      );
+      return false;
+    }
+
+    console.log(`Set Vercel production branch: ${branch}`);
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`\nCould not set Vercel production branch: ${message}`);
+    return false;
+  }
+}
+
 export function connectVercelGitRepository(scope?: string): boolean {
   const remote = readGitOriginRemote();
   if (!remote) {
@@ -265,7 +378,7 @@ export function connectVercelGitRepository(scope?: string): boolean {
 
   console.log(`\nConnecting Vercel project to git remote: ${remote}`);
   try {
-    runVercel(appendVercelScope(["git", "connect", remote], scope));
+    runVercel(appendVercelScope(["git", "connect", remote, "--yes"], scope));
     console.log("Vercel Git repository connected.");
     return true;
   } catch (error) {
@@ -273,6 +386,18 @@ export function connectVercelGitRepository(scope?: string): boolean {
     console.log(`\nCould not connect Vercel Git repository: ${message}`);
     return false;
   }
+}
+
+export async function configureVercelGitRepository(
+  scope?: string,
+): Promise<boolean> {
+  connectVercelGitRepository(scope);
+  const branch = resolveGitProductionBranch();
+  return setVercelProductionBranch(branch, scope);
+}
+
+export function deployVercelProduction(scope?: string): void {
+  runVercel(appendVercelScope(["deploy", "--prod", "--yes"], scope));
 }
 
 export function waitForVercelProductionUrl(
@@ -313,17 +438,48 @@ export function waitForVercelProductionUrl(
   return null;
 }
 
-export function provisionVercelProductionUrl(
+export async function provisionVercelProductionUrl(
   scope?: string,
   projectName?: string,
-): string | null {
-  const fallback = resolveVercelProductionUrl(scope, projectName);
-  const gitConnected = connectVercelGitRepository(scope);
-  if (!gitConnected) {
-    return fallback;
+): Promise<string | null> {
+  await configureVercelGitRepository(scope);
+  return resolveVercelProductionUrl(scope, projectName);
+}
+
+export async function finalizeVercelCloudDeployment(
+  scope: string | undefined,
+  projectName: string | undefined,
+  cloudDeployEnv: Record<string, string>,
+): Promise<void> {
+  console.log("\nCreating initial Vercel production deployment...");
+  try {
+    deployVercelProduction(scope);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`\nCould not create Vercel production deployment: ${message}`);
+    return;
   }
 
-  return waitForVercelProductionUrl(scope, projectName) ?? fallback;
+  const deployedUrl = waitForVercelProductionUrl(scope, projectName, {
+    maxWaitMs: 600_000,
+    pollIntervalMs: 10_000,
+  });
+  if (!deployedUrl) {
+    return;
+  }
+
+  if (cloudDeployEnv.NEXT_PUBLIC_APP_URL === deployedUrl) {
+    return;
+  }
+
+  cloudDeployEnv.NEXT_PUBLIC_APP_URL = deployedUrl;
+  console.log(`\nUpdating NEXT_PUBLIC_APP_URL on Vercel: ${deployedUrl}`);
+  try {
+    pushEnvToVercel({ NEXT_PUBLIC_APP_URL: deployedUrl }, scope);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`\nCould not update NEXT_PUBLIC_APP_URL on Vercel: ${message}`);
+  }
 }
 
 function parseEnvValues(content: string): Map<string, string> {

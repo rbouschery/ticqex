@@ -3,6 +3,7 @@ import {
   defaultVercelProjectName,
   normalizeVercelProductionUrl,
   parseVercelTeamsJson,
+  resolveGitProductionBranch,
   resolveVercelTeamSelection,
   type VercelTeam,
 } from "../../scripts/lib/vercel-setup";
@@ -103,5 +104,18 @@ describe("normalizeVercelProductionUrl", () => {
     expect(normalizeVercelProductionUrl("https://readbetter-ticqex.vercel.app/")).toBe(
       "https://readbetter-ticqex.vercel.app",
     );
+  });
+});
+
+describe("resolveGitProductionBranch", () => {
+  it("prefers main or master when present", () => {
+    expect(resolveGitProductionBranch("feature/foo")).toBe("main");
+    expect(resolveGitProductionBranch("develop")).toBe("main");
+    expect(resolveGitProductionBranch(null)).toBe("main");
+  });
+
+  it("keeps the current branch when it is main or master", () => {
+    expect(resolveGitProductionBranch("main")).toBe("main");
+    expect(resolveGitProductionBranch("master")).toBe("master");
   });
 });

@@ -144,6 +144,34 @@ export function readGitOriginRemote(): string | null {
   return remote || null;
 }
 
+export function readGitCurrentBranch(): string | null {
+  const result = spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+    cwd: ROOT,
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    return null;
+  }
+
+  const branch = result.stdout.trim();
+  if (!branch || branch === "HEAD") {
+    return null;
+  }
+
+  return branch;
+}
+
+export function gitBranchExists(branch: string): boolean {
+  const result = spawnSync("git", ["rev-parse", "--verify", branch], {
+    cwd: ROOT,
+    encoding: "utf8",
+    stdio: "ignore",
+  });
+
+  return result.status === 0;
+}
+
 export function sleepMs(ms: number): void {
   if (ms <= 0) {
     return;

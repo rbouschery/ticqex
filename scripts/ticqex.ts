@@ -26,6 +26,7 @@ import {
   listVercelTeams,
   provisionVercelProductionUrl,
   pushEnvToVercel,
+  finalizeVercelCloudDeployment,
   readLinkedVercelProjectName,
   resolveVercelTeamSelection,
   type VercelTeam,
@@ -504,7 +505,12 @@ async function promptVercelTeam(
 async function linkVercelForCloudInit(
   rl: ReadlineInterface,
   cloudDeployEnv: Record<string, string>,
-): Promise<{ rl: ReadlineInterface; vercelScope?: string; linked: boolean }> {
+): Promise<{
+  rl: ReadlineInterface;
+  vercelScope?: string;
+  linked: boolean;
+  projectName?: string;
+}> {
   if (!isVercelCliAvailable()) {
     console.log(
       "\nVercel CLI not found. Install it globally, then re-run init to link and sync env vars.",
@@ -558,7 +564,7 @@ async function linkVercelForCloudInit(
   }
 
   closeReadline(rl);
-  const productionUrl = provisionVercelProductionUrl(vercelScope, projectName);
+  const productionUrl = await provisionVercelProductionUrl(vercelScope, projectName);
   rl = createReadline();
   if (productionUrl) {
     cloudDeployEnv.NEXT_PUBLIC_APP_URL = productionUrl;
@@ -569,7 +575,7 @@ async function linkVercelForCloudInit(
     );
   }
 
-  return { rl, vercelScope, linked: true };
+  return { rl, vercelScope, linked: true, projectName };
 }
 
 async function syncCloudDeployEnvToVercel(
@@ -845,7 +851,12 @@ async function init(args: string[]): Promise<void> {
     usedCloudSupabase = supabaseContext.usedCloudSupabase;
 
     let vercelLink:
-      | { rl: ReadlineInterface; vercelScope?: string; linked: boolean }
+      | {
+          rl: ReadlineInterface;
+          vercelScope?: string;
+          linked: boolean;
+          projectName?: string;
+        }
       | undefined;
     if (usedCloudSupabase && supabaseContext.cloudDeployEnv) {
       vercelLink = await linkVercelForCloudInit(
@@ -863,6 +874,13 @@ async function init(args: string[]): Promise<void> {
         supabaseContext.cloudDeployEnv,
         vercelLink.vercelScope,
       );
+      closeReadline(rl);
+      await finalizeVercelCloudDeployment(
+        vercelLink.vercelScope,
+        vercelLink.projectName,
+        supabaseContext.cloudDeployEnv,
+      );
+      rl = createReadline();
     }
   } finally {
     rl.close();
