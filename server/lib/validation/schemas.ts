@@ -225,14 +225,20 @@ export const reorderCustomFieldsSchema = z.object({
   ids: z.array(z.string().uuid()).min(1),
 });
 
+const ticketFieldVisibilityEntrySchema = z.object({
+  showOnCard: z.boolean(),
+  showInTicket: z.boolean(),
+});
+
+export const ticketFieldVisibilitySchema = z.record(
+  z.string(),
+  ticketFieldVisibilityEntrySchema,
+);
+
 export const patchSettingsSchema = z.object({
   visible_status_ids: z.array(z.string().uuid()).optional(),
   default_inbound_status_id: z.string().uuid().nullable().optional(),
-  show_contact_on_ticket: z.boolean().optional(),
-  show_assignee_on_ticket: z.boolean().optional(),
-  show_body_on_ticket: z.boolean().optional(),
-  visible_ticket_field_ids: z.array(z.string().uuid()).optional(),
-  visible_contact_field_ids: z.array(z.string().uuid()).optional(),
+  ticket_field_visibility: ticketFieldVisibilitySchema.optional(),
   email_signature: z.string().optional(),
   email_thread_order: z.enum(["oldest_first", "newest_first"]).optional(),
 });

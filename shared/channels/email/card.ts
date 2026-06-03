@@ -3,24 +3,36 @@ import {
   resolvePolicyFieldValue,
   sortPoliciesByCardPriority,
 } from "../field-policy";
+import { CORE_TICKET_FIELD_IDS } from "../../ticket-fields/ids";
 import { getConversationOriginCardBadge } from "../ticket-origin-badge";
 import { emailFieldPolicies } from "./fields";
-import type { ChannelCardTicketContext, TicketCardSurface } from "../types";
-
-const MAX_CARD_CHIPS = 2;
+import type {
+  ChannelCardTicketContext,
+  TicketCardChip,
+  TicketCardSurface,
+} from "../types";
 
 function chipFromPolicy(
   context: ChannelCardTicketContext,
   key: string,
   label: string,
-): { label: string; value: string } | null {
+): TicketCardChip | null {
   const raw = resolvePolicyFieldValue(key, {
     contact_address: context.contact_address,
     custom_fields: context.custom_fields,
   });
+  const fieldId =
+    key === "contact_address" ? CORE_TICKET_FIELD_IDS.contact_address : undefined;
+  const base = fieldId
+    ? { fieldId, sourceKey: key, label }
+    : { sourceKey: key, label };
   if (raw == null || raw === "") return null;
+  if (Array.isArray(raw)) {
+    if (raw.length === 0) return null;
+    return { ...base, value: raw.map(String).join(", ") };
+  }
 
-  return { label, value: String(raw) };
+  return { ...base, value: String(raw) };
 }
 
 function buildEmailCard(context: ChannelCardTicketContext): TicketCardSurface {
@@ -30,8 +42,7 @@ function buildEmailCard(context: ChannelCardTicketContext): TicketCardSurface {
     .map((policy) =>
       chipFromPolicy(context, policy.key, policy.label),
     )
-    .filter((chip): chip is NonNullable<typeof chip> => chip !== null)
-    .slice(0, MAX_CARD_CHIPS);
+    .filter((chip): chip is NonNullable<typeof chip> => chip !== null);
 
   const missingRequired = findMissingRequiredFields(
     emailFieldPolicies,

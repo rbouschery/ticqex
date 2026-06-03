@@ -5,10 +5,17 @@ import type { BoardTicketRow } from "@server/domain/ticket";
 import { loadCustomFieldsMap } from "@server/services/custom-fields";
 import { getUnreadCountsByTicket } from "@server/services/message-reads";
 import { loadTagsForTickets } from "@server/services/tags";
+import {
+  filterTicketCardSurface,
+  type ResolvedTicketFieldLayout,
+  type TicketCustomFieldDefinition,
+} from "@shared/ticket-fields";
 
 export async function enrichTicketsForBoard(
   ticketRows: BoardTicketRow[],
   userId?: string,
+  layout?: ResolvedTicketFieldLayout,
+  customFieldDefinitions?: TicketCustomFieldDefinition[],
 ) {
   const db = createAdminClient();
   const ids = ticketRows.map((t) => t.id);
@@ -59,7 +66,7 @@ export async function enrichTicketsForBoard(
       : null;
 
     const preview = previews.get(t.id) ?? "";
-    const card_surface = buildTicketCardSurface({
+    let card_surface = buildTicketCardSurface({
       kind: t.kind,
       channel: t.channel ?? null,
       contact_address: t.contact_address ?? null,
@@ -67,6 +74,14 @@ export async function enrichTicketsForBoard(
       preview,
       origin: t.origin,
     });
+
+    if (layout && customFieldDefinitions) {
+      card_surface = filterTicketCardSurface(
+        card_surface,
+        layout,
+        customFieldDefinitions,
+      );
+    }
 
     return {
       id: t.id,

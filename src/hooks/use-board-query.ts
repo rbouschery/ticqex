@@ -10,10 +10,12 @@ import { buildBoardApiPath } from "@shared/board-api-path";
 import { apiFetch } from "@/lib/api-client";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { BoardLane } from "@/components/board/types";
+import type { ResolvedTicketFieldLayout } from "@shared/ticket-fields";
 
 export type BoardResponse = {
   lanes: BoardLane[];
   settings?: Record<string, unknown>;
+  ticket_field_layout?: ResolvedTicketFieldLayout;
   filter_active?: boolean;
   search_active?: boolean;
   capped?: boolean;

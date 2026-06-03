@@ -1,5 +1,6 @@
 import { createAdminClient } from "@server/lib/supabase-admin";
 import { ApiError } from "@server/lib/errors";
+import { mergeTicketFieldVisibilityPatch } from "@shared/ticket-fields";
 
 export async function getSettings() {
   const db = createAdminClient();
@@ -14,6 +15,23 @@ export async function getSettings() {
 
 export async function patchSettings(patch: Record<string, unknown>) {
   const db = createAdminClient();
+
+  if (patch.ticket_field_visibility !== undefined) {
+    const { data: existingSettings, error: existingErr } = await db
+      .from("global_settings")
+      .select("ticket_field_visibility")
+      .eq("id", 1)
+      .single();
+    if (existingErr) throw ApiError.internal(existingErr.message);
+
+    patch.ticket_field_visibility = mergeTicketFieldVisibilityPatch(
+      existingSettings.ticket_field_visibility,
+      patch.ticket_field_visibility as Record<
+        string,
+        { showOnCard: boolean; showInTicket: boolean }
+      >,
+    );
+  }
 
   if (
     patch.default_inbound_status_id !== undefined &&

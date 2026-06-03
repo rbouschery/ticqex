@@ -85,7 +85,12 @@ describe("email card surface", () => {
     expect(built.badges[0]?.label).toBe("Email");
     expect(built.badges[0]?.variant).toBe("outline");
     expect(built.chips).toEqual([
-      { label: "Email address", value: "user@example.com" },
+      {
+        fieldId: "contact_address",
+        sourceKey: "contact_address",
+        label: "Email address",
+        value: "user@example.com",
+      },
     ]);
     expect(built.warning_badges).toHaveLength(0);
   });
@@ -112,8 +117,8 @@ describe("field policy helpers", () => {
       preview: "Task preview",
     });
     expect(taskSurface.chips).toEqual([
-      { label: "priority", value: "high" },
-      { label: "region", value: "eu" },
+      { sourceKey: "priority", label: "priority", value: "high" },
+      { sourceKey: "region", label: "region", value: "eu" },
     ]);
     expect(taskSurface.preview).toBe("Task preview");
   });

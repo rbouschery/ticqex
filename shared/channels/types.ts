@@ -13,6 +13,10 @@ export type TicketCardBadge = {
 };
 
 export type TicketCardChip = {
+  /** Stable ticket field id when the chip maps directly to a ticket field. */
+  fieldId?: string;
+  /** Stable source key for channel/custom fields when an id is not available. */
+  sourceKey?: string;
   label: string;
   value: string;
 };

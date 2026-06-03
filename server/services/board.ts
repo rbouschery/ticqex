@@ -11,6 +11,7 @@ import {
 } from "@shared/board-sort";
 import { perLaneTicketLimit } from "@shared/board-limits";
 import { enrichTicketsForBoard } from "@server/services/board-enrichment";
+import { loadTicketFieldLayoutContext } from "@server/services/ticket-field-layout";
 import { loadLaneOrdersForUser } from "@server/services/board-lane-orders";
 import { resolveFilteredTicketIds } from "@server/services/ticket-filters";
 import { resolveSearchTicketIds } from "@server/services/board-search";
@@ -398,7 +399,13 @@ export async function getLaneTicketsPage(
     ctx.manualOrder,
   );
 
-  const enriched = await enrichTicketsForBoard(rows, userId);
+  const { layout, customFieldDefinitions } = await loadTicketFieldLayoutContext();
+  const enriched = await enrichTicketsForBoard(
+    rows,
+    userId,
+    layout,
+    customFieldDefinitions,
+  );
 
   return {
     status: {
@@ -429,6 +436,10 @@ export async function getBoard(
 
   if (settingsErr) throw ApiError.internal(settingsErr.message);
 
+  const { layout, customFieldDefinitions } = await loadTicketFieldLayoutContext({
+    settings,
+  });
+
   const laneResults = await Promise.all(
     ctx.visibleStatuses.map(async (status) => {
       const statusId = status.id as string;
@@ -452,7 +463,12 @@ export async function getBoard(
         ctx.manualOrders.get(statusId),
       );
 
-      const enriched = await enrichTicketsForBoard(rows, userId);
+      const enriched = await enrichTicketsForBoard(
+        rows,
+        userId,
+        layout,
+        customFieldDefinitions,
+      );
 
       return {
         status: { id: status.id, name: status.name, color: status.color },
@@ -468,6 +484,7 @@ export async function getBoard(
   return {
     lanes: laneResults,
     settings,
+    ticket_field_layout: layout,
     filter_active: ctx.filterActive,
     search_active: ctx.searchActive,
     capped,
