@@ -26,6 +26,10 @@ Built on Supabase (Postgres, Auth, and Realtime) and Next.js (App Router), async
 email work runs in-process via Next.js `after()` — no external job runner
 required.
 
+Customize the board in the admin UI: status **lanes**, **custom fields**
+(text, select, multiselect, and more), and per-field **visibility** on Kanban
+cards — plus saved filters and manual lane ordering when you need it.
+
 <!-- TODO: replace with a real screenshot or demo GIF of the Kanban board.
      Drop the asset under public/ (e.g. public/screenshot.png) and reference it:
 ![Ticqex board](./public/screenshot.png)
@@ -100,9 +104,12 @@ Open [http://localhost:3000](http://localhost:3000), sign in with `SEED_ADMIN_*`
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `pnpm db:env` | App auth (client) |
 | `SUPABASE_SECRET_KEY` | `pnpm db:env` | Admin seed, server jobs |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `.env.example` defaults | `pnpm db:seed-admin` |
+| `NEXT_PUBLIC_APP_URL` | `.env.local` / `pnpm ticqex init` | Public app URL (webhooks, links; use `http://localhost:3000` locally) |
 | `RESEND_*`, `SUPPORT_*` | `.env.local` | Email in/out |
 
 Async email processing uses Next.js `after()` — no external job runner required.
+
+Use `http://localhost:3000` for local dev (not `127.0.0.1` — Next.js treats them as different origins).
 
 ### Cloud Supabase
 
@@ -111,11 +118,30 @@ Async email processing uses Next.js `after()` — no external job runner require
 3. Choose whether to push migrations to the linked project.
 4. Set cloud URL, publishable key, and secret key in `.env.local` or deployment settings.
 
+## Agent onboarding
+
+Agents connect the same way as automation scripts: **REST** (`/api/v1/*`) or **MCP**
+(`/api/mcp`), both authenticated with a **Bearer API key**.
+
+1. Run the app and sign in as an admin (`pnpm dev`, then `pnpm db:seed-admin` if needed).
+2. Open **Settings → API & MCP**, create an API key, and copy it once (it is not shown again).
+3. Point your agent client at `{NEXT_PUBLIC_APP_URL}/api/mcp` with `Authorization: Bearer <key>`.
+4. Use the copy-paste snippets on that settings page for Cursor, Codex, Claude Code, and similar clients.
+
+MCP tools mirror the REST mutations agents need (tickets, board moves, messages,
+contacts, tags, statuses, custom fields, settings, and more). API key lifecycle
+(create/revoke/list) stays in the admin UI and REST only — not exposed over MCP.
+REST↔MCP coverage is checked in `tests/unit/mcp-api-parity.test.ts`.
+
+For HTTP-only integrations, call `/api/v1/*` with the same Bearer key.
+
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
 | `pnpm dev` | Next.js dev server (UI, API, background email) |
+| `pnpm build` | Production build |
+| `pnpm lint` | ESLint |
 | `pnpm ticqex init` | Interactive setup for local Supabase, env vars, channels, and integrations |
 | `pnpm config:check` | Validate `config/ticqex.config.json` bindings and required env vars |
 | `pnpm config:sync` | Validate activation JSON and print planned channel field sync (dry-run) |
@@ -129,7 +155,7 @@ Async email processing uses Next.js `after()` — no external job runner require
 
 ### Tests
 
-All tests live under `tests/unit/` and `tests/integration/` (shared helpers in `tests/helpers/`). Unit tests run without Supabase. Integration tests call `server/services` directly (not HTTP), except the MCP route test which needs a dev server on `LOCAL_APP_URL` (default `http://127.0.0.1:3000`).
+All tests live under `tests/unit/` and `tests/integration/` (shared helpers in `tests/helpers/`). Unit tests run without Supabase. Integration tests call `server/services` directly (not HTTP), except the MCP route test which needs `pnpm dev` on `http://localhost:3000` (override with `LOCAL_APP_URL` or `NEXT_PUBLIC_APP_URL`).
 
 ```bash
 pnpm test:unit
@@ -142,13 +168,17 @@ Set `SKIP_MCP_INTEGRATION=1` to skip the MCP HTTP test when `pnpm dev` is not ru
 
 | Path | Purpose |
 |------|---------|
-| `src/app/` | Next.js App Router (admin UI, API routes) |
-| `server/services/` | Business logic |
-| `server/channels/` | Product channel behavior (email, future chat channels) |
-| `server/integrations/` | External provider integrations (Resend) |
+| `src/app/` | Next.js App Router — admin UI, `/api/v1/*`, webhooks, MCP |
+| `src/components/` | React components (board, settings, account) |
+| `server/services/` | Business logic (tickets, board, messages, contacts, …) |
+| `server/channels/` | Product channel behavior (email today) |
+| `server/integrations/` | External providers (Resend) |
+| `server/lib/`, `server/middleware/` | Route handlers, auth, validation, errors |
+| `shared/` | Code shared between client and server (config, registries, schemas) |
 | `config/` | OSS activation config (`ticqex.config.json` — version-controlled; `ticqex.config.example.json` is the bootstrap template) |
+| `scripts/` | Setup/seed/verify CLIs (`pnpm ticqex`, `db:*`, `config:*`) |
 | `supabase/migrations/` | Database schema |
-| `tests/` | Vitest unit + integration tests |
+| `tests/unit`, `tests/integration` | Vitest suites (helpers in `tests/helpers/`) |
 
 ## Documentation
 

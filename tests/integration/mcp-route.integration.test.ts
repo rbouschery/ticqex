@@ -2,15 +2,11 @@ import { afterEach, expect } from "vitest";
 import { createApiKey, revokeApiKey } from "@server/services/api-keys";
 import {
   requireSupabaseEnv,
+  resolveLocalAppUrl,
   signInAsSeedAdmin,
 } from "../helpers/integration";
 
-const LOCAL_APP_URL =
-  process.env.LOCAL_APP_URL ??
-  (process.env.NEXT_PUBLIC_APP_URL?.includes("127.0.0.1") ||
-  process.env.NEXT_PUBLIC_APP_URL?.includes("localhost")
-    ? process.env.NEXT_PUBLIC_APP_URL
-    : "http://127.0.0.1:3000");
+const LOCAL_APP_URL = resolveLocalAppUrl();
 
 const describeMcp = describe.skipIf(
   !requireSupabaseEnv() || process.env.SKIP_MCP_INTEGRATION === "1",

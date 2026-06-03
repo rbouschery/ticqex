@@ -10,6 +10,24 @@ import { perLaneTicketLimit } from "@shared/board-limits";
 
 export { LOADTEST_TITLE_PREFIX, NEEDLE_SECRET, NEEDLE_TITLE };
 
+const DEFAULT_LOCAL_APP_URL = "http://localhost:3000";
+
+/** App origin for integration tests that hit the running Next dev server. */
+export function resolveLocalAppUrl(): string {
+  const raw = process.env.LOCAL_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL;
+  if (!raw) return DEFAULT_LOCAL_APP_URL;
+
+  try {
+    const url = new URL(raw);
+    if (url.hostname === "127.0.0.1") {
+      url.hostname = "localhost";
+    }
+    return url.origin;
+  } catch {
+    return DEFAULT_LOCAL_APP_URL;
+  }
+}
+
 export const SEED_ADMIN_EMAIL =
   process.env.SEED_ADMIN_EMAIL ?? "admin@ticqex.local";
 export const SEED_ADMIN_PASSWORD =
