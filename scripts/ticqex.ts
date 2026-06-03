@@ -23,8 +23,11 @@ import {
   isVercelCliAvailable,
   isVercelLinked,
   linkVercelProject,
+  listVercelTeams,
   pushEnvToVercel,
   resolveVercelProductionUrl,
+  resolveVercelTeamSelection,
+  type VercelTeam,
 } from "./lib/vercel-setup";
 import {
   defaultTicqexConfig,
@@ -423,6 +426,46 @@ async function setupCloudSupabase(rl: ReadlineInterface): Promise<ReadlineInterf
   return activeRl;
 }
 
+async function promptVercelTeam(rl: ReadlineInterface): Promise<string> {
+  closeReadline(rl);
+  let teams: VercelTeam[];
+  try {
+    teams = listVercelTeams();
+  } catch (error) {
+    rl = createReadline();
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not list Vercel teams: ${message}`);
+  }
+  rl = createReadline();
+
+  if (teams.length === 0) {
+    throw new Error("No Vercel teams found for the current account.");
+  }
+
+  console.log("\nVercel teams:");
+  for (const [index, team] of teams.entries()) {
+    const current = team.current ? " [current]" : "";
+    console.log(`  ${index + 1}. ${team.name} (${team.slug})${current}`);
+  }
+
+  const defaultTeam = teams.find((team) => team.current) ?? teams[0]!;
+  const defaultLabel = String(teams.indexOf(defaultTeam) + 1);
+
+  while (true) {
+    const answer = await prompt(
+      rl,
+      "Vercel team (number, slug, or Enter for current)",
+      defaultLabel,
+    );
+    const selected = resolveVercelTeamSelection(answer, teams);
+    if (selected) {
+      console.log(`Using Vercel team: ${selected.name} (${selected.slug})`);
+      return selected.slug;
+    }
+    console.log("Please enter a valid team number or slug.");
+  }
+}
+
 async function setupVercelDeployment(rl: ReadlineInterface): Promise<ReadlineInterface> {
   if (!isVercelCliAvailable()) {
     console.log(
@@ -438,8 +481,11 @@ async function setupVercelDeployment(rl: ReadlineInterface): Promise<ReadlineInt
   );
   if (!linkVercel) return rl;
 
-  closeReadline(rl);
-  rl = createReadline();
+  let vercelScope: string | undefined;
+  if (!isVercelLinked()) {
+    vercelScope = await promptVercelTeam(rl);
+  }
+
   if (!isVercelLinked()) {
     const projectExists = await promptYesNo(
       rl,
@@ -459,10 +505,10 @@ async function setupVercelDeployment(rl: ReadlineInterface): Promise<ReadlineInt
 
     closeReadline(rl);
     if (projectExists) {
-      linkVercelProject(projectName);
+      linkVercelProject(projectName, vercelScope);
     } else {
-      createVercelProject(projectName);
-      linkVercelProject(projectName);
+      createVercelProject(projectName, vercelScope);
+      linkVercelProject(projectName, vercelScope);
     }
     rl = createReadline();
   } else {
@@ -470,7 +516,7 @@ async function setupVercelDeployment(rl: ReadlineInterface): Promise<ReadlineInt
   }
 
   let envContent = readEnvContent();
-  const productionUrl = resolveVercelProductionUrl();
+  const productionUrl = resolveVercelProductionUrl(vercelScope);
   if (productionUrl) {
     envContent = setEnvLine(envContent, "NEXT_PUBLIC_APP_URL", productionUrl);
     writeEnvFile(ENV_FILE, envContent);
@@ -483,7 +529,7 @@ async function setupVercelDeployment(rl: ReadlineInterface): Promise<ReadlineInt
 
   closeReadline(rl);
   try {
-    const pushed = pushEnvToVercel(envContent);
+    const pushed = pushEnvToVercel(envContent, vercelScope);
     rl = createReadline();
     if (pushed.length) {
       console.log("\nSynced env vars to Vercel (production, preview, development):");

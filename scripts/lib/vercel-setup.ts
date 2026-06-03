@@ -32,6 +32,22 @@ type VercelProjectLink = {
   orgId?: string;
 };
 
+export type VercelTeam = {
+  id: string;
+  slug: string;
+  name: string;
+  current: boolean;
+};
+
+type VercelTeamsList = {
+  teams?: Array<{
+    id?: string;
+    slug?: string;
+    name?: string;
+    current?: boolean;
+  }>;
+};
+
 type VercelProjectList = {
   projects?: Array<{
     id?: string;
@@ -67,25 +83,78 @@ export function defaultVercelProjectName(): string {
   }
 }
 
-export function linkVercelProject(projectName?: string): void {
-  const args = ["link", "--yes"];
+export function parseVercelTeamsJson(output: string): VercelTeam[] {
+  const start = output.indexOf("{");
+  const end = output.lastIndexOf("}");
+  if (start === -1 || end === -1) return [];
+
+  const parsed = JSON.parse(output.slice(start, end + 1)) as VercelTeamsList;
+  return (parsed.teams ?? [])
+    .filter(
+      (team): team is { id: string; slug: string; name: string; current?: boolean } =>
+        Boolean(team.id && team.slug && team.name),
+    )
+    .map((team) => ({
+      id: team.id,
+      slug: team.slug,
+      name: team.name,
+      current: team.current ?? false,
+    }));
+}
+
+export function listVercelTeams(): VercelTeam[] {
+  const output = runVercel(["teams", "ls", "--format", "json"], {
+    capture: true,
+  });
+  return parseVercelTeamsJson(output);
+}
+
+export function resolveVercelTeamSelection(
+  input: string,
+  teams: VercelTeam[],
+): VercelTeam | null {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return teams.find((team) => team.current) ?? teams[0] ?? null;
+  }
+
+  const asNumber = Number.parseInt(trimmed, 10);
+  if (!Number.isNaN(asNumber) && asNumber >= 1 && asNumber <= teams.length) {
+    return teams[asNumber - 1] ?? null;
+  }
+
+  return (
+    teams.find((team) => team.slug === trimmed || team.id === trimmed) ?? null
+  );
+}
+
+function appendVercelScope(args: string[], scope?: string): string[] {
+  if (!scope) return args;
+  return ["--scope", scope, ...args];
+}
+
+export function linkVercelProject(projectName?: string, scope?: string): void {
+  const args = appendVercelScope(["link", "--yes"], scope);
   if (projectName) {
     args.push("--project", projectName);
   }
   runVercel(args);
 }
 
-export function createVercelProject(projectName: string): void {
-  runVercel(["project", "add", projectName]);
+export function createVercelProject(projectName: string, scope?: string): void {
+  runVercel(appendVercelScope(["project", "add", projectName], scope));
 }
 
-export function resolveVercelProductionUrl(): string | null {
+export function resolveVercelProductionUrl(scope?: string): string | null {
   const link = readVercelProjectLink();
   if (!link?.projectId) return null;
 
-  const output = runVercel(["project", "ls", "--format", "json"], {
-    capture: true,
-  });
+  const output = runVercel(
+    appendVercelScope(["project", "ls", "--format", "json"], scope),
+    {
+      capture: true,
+    },
+  );
   const start = output.indexOf("{");
   const end = output.lastIndexOf("}");
   if (start === -1 || end === -1) return null;
@@ -118,7 +187,7 @@ function isPlaceholderEnvValue(value: string): boolean {
   );
 }
 
-export function pushEnvToVercel(envContent: string): string[] {
+export function pushEnvToVercel(envContent: string, scope?: string): string[] {
   const values = parseEnvValues(envContent);
   const pushed: string[] = [];
 
@@ -131,17 +200,22 @@ export function pushEnvToVercel(envContent: string): string[] {
       : ["--no-sensitive"];
 
     for (const target of ["production", "preview", "development"] as const) {
-      runVercel([
-        "env",
-        "add",
-        key,
-        target,
-        ...sensitiveFlag,
-        "--value",
-        value,
-        "--yes",
-        "--force",
-      ]);
+      runVercel(
+        appendVercelScope(
+          [
+            "env",
+            "add",
+            key,
+            target,
+            ...sensitiveFlag,
+            "--value",
+            value,
+            "--yes",
+            "--force",
+          ],
+          scope,
+        ),
+      );
     }
 
     pushed.push(key);
