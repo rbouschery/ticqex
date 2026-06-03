@@ -42,6 +42,7 @@
     "env:verify": "tsx --env-file=.env.local scripts/verify-env.ts",
     "db:seed-admin": "tsx --env-file=.env.local scripts/seed.ts",
     "ticqex": "tsx scripts/ticqex.ts",
+    "resend:setup-webhooks": "tsx scripts/setup-resend-webhooks.ts",
     "config:check": "tsx --env-file=.env.local scripts/config-check.ts",
     "config:sync": "tsx --env-file=.env.local scripts/config-sync.ts",
     "supabase": "supabase",

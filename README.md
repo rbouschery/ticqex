@@ -43,6 +43,10 @@ cards — plus saved filters and manual lane ordering when you need it.
 - [pnpm](https://pnpm.io/)
 - [Docker](https://www.docker.com/) (for local Supabase)
 
+Optional when enabling the email channel (on by default):
+
+- **[Resend](https://resend.com/) + API key** — inbound/outbound mail and webhooks use Resend; disable email in `pnpm ticqex init` if you do not need it yet
+
 ### 1. Install dependencies
 
 ```bash
@@ -51,10 +55,20 @@ pnpm install
 
 ### 2. Interactive setup
 
-Use the repo-local CLI to configure Supabase setup and choose active channels/integrations:
+Use the repo-local CLI to configure Supabase and email (Resend):
 
 ```bash
 pnpm ticqex init
+```
+
+**Default:** the email channel and Resend integration stay **on** (`config/ticqex.config.json`). With email enabled, you need a Resend API key (`re_…` from the [Resend dashboard](https://resend.com/api-keys)). Init prompts for that key, your **public app URL** (tunnel or deployment hostname for webhooks), and can **create Resend webhooks via API** — signing secrets are written to `.env.local` automatically. You also set support sender email/name.
+
+For local UI-only work without mail, answer **no** when asked to enable the email channel. For real inbound email, use a tunnel URL as `NEXT_PUBLIC_APP_URL` so Resend can reach your app (plain `http://localhost:3000` is fine for the admin UI, not for webhooks).
+
+Re-run or fix webhooks later:
+
+```bash
+pnpm resend:setup-webhooks --app-url https://your-public-host
 ```
 
 For local development, choose `local` and then `start`, `reset`, or `skip`. If local Supabase has already been initialized, you can run:
@@ -104,8 +118,11 @@ Open [http://localhost:3000](http://localhost:3000), sign in with `SEED_ADMIN_*`
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `pnpm db:env` | App auth (client) |
 | `SUPABASE_SECRET_KEY` | `pnpm db:env` | Admin seed, server jobs |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `.env.example` defaults | `pnpm db:seed-admin` |
-| `NEXT_PUBLIC_APP_URL` | `.env.local` / `pnpm ticqex init` | Public app URL (webhooks, links; use `http://localhost:3000` locally) |
-| `RESEND_*`, `SUPPORT_*` | `.env.local` | Email in/out |
+| `NEXT_PUBLIC_APP_URL` | `pnpm ticqex init` | Public hostname Resend calls for webhooks (tunnel or deploy URL) |
+| `RESEND_API_KEY` | [Resend API keys](https://resend.com/api-keys) / init | **Required** when email is enabled |
+| `RESEND_INBOUND_WEBHOOK_SECRET` | init / `resend:setup-webhooks` | Svix secret for inbound (`email.received`) |
+| `RESEND_EVENTS_WEBHOOK_SECRET` | init / `resend:setup-webhooks` | Svix secret for delivery events |
+| `SUPPORT_EMAIL` / `SUPPORT_FROM_NAME` | init | Outbound From address and display name |
 
 Async email processing uses Next.js `after()` — no external job runner required.
 
@@ -142,7 +159,8 @@ For HTTP-only integrations, call `/api/v1/*` with the same Bearer key.
 | `pnpm dev` | Next.js dev server (UI, API, background email) |
 | `pnpm build` | Production build |
 | `pnpm lint` | ESLint |
-| `pnpm ticqex init` | Interactive setup for local Supabase, env vars, channels, and integrations |
+| `pnpm ticqex init` | Interactive setup: Supabase, Resend API key, webhooks, and email env (email on by default) |
+| `pnpm resend:setup-webhooks` | Create Resend inbound/events webhooks and write signing secrets to `.env.local` |
 | `pnpm config:check` | Validate `config/ticqex.config.json` bindings and required env vars |
 | `pnpm config:sync` | Validate activation JSON and print planned channel field sync (dry-run) |
 | `pnpm env:verify` | Check Supabase env vars (`pnpm db:env`); use `config:check` for email/Resend |

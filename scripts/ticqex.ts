@@ -18,6 +18,7 @@ import {
   setEnvLine,
   writeEnvFile,
 } from "./lib/env-file";
+import { provisionResendWebhooks } from "./lib/resend-webhooks";
 
 type DbSetupMode = "skip" | "start" | "reset";
 type SupabaseTarget = "local" | "cloud" | "skip";
@@ -346,6 +347,7 @@ async function configureChannelsAndIntegrations(
 
   if (enableEmail) {
     console.log("\nConfigure Resend email integration.");
+
     for (const entry of [
       {
         key: "RESEND_API_KEY",
@@ -353,15 +355,105 @@ async function configureChannelsAndIntegrations(
         required: true,
       },
       {
-        key: "RESEND_INBOUND_WEBHOOK_SECRET",
-        label: "Resend inbound webhook signing secret",
+        key: "NEXT_PUBLIC_APP_URL",
+        label:
+          "Public app URL (tunnel or deployment hostname for Resend webhooks)",
         required: true,
+        defaultValue: "http://localhost:3000",
       },
-      {
-        key: "RESEND_EVENTS_WEBHOOK_SECRET",
-        label: "Resend events webhook signing secret",
-        required: false,
-      },
+    ] as const) {
+      const value = await promptEnvValue(rl, envContent, entry.key, entry);
+      if (value) {
+        envContent = setEnvLine(envContent, entry.key, value);
+      }
+    }
+
+    const resendApiKey = getEnvValue(envContent, "RESEND_API_KEY");
+    const appUrl = getEnvValue(envContent, "NEXT_PUBLIC_APP_URL");
+    const hasInboundSecret = Boolean(
+      getEnvValue(envContent, "RESEND_INBOUND_WEBHOOK_SECRET"),
+    );
+
+    const provisionWebhooks =
+      resendApiKey &&
+      appUrl &&
+      (await promptYesNo(
+        rl,
+        "Create Resend webhooks via API (saves signing secrets to .env.local)?",
+        !hasInboundSecret,
+      ));
+
+    if (provisionWebhooks) {
+      try {
+        const result = await provisionResendWebhooks({
+          apiKey: resendApiKey,
+          appUrl,
+        });
+        envContent = setEnvLine(
+          envContent,
+          "RESEND_INBOUND_WEBHOOK_SECRET",
+          result.inboundSigningSecret,
+        );
+        envContent = setEnvLine(
+          envContent,
+          "RESEND_EVENTS_WEBHOOK_SECRET",
+          result.eventsSigningSecret,
+        );
+        console.log("\nResend webhooks:");
+        console.log(
+          `  inbound (${result.inboundCreated ? "created" : "reused"}): ${result.inboundEndpoint}`,
+        );
+        console.log(
+          `  events (${result.eventsCreated ? "created" : "reused"}): ${result.eventsEndpoint}`,
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`\nCould not provision Resend webhooks: ${message}`);
+        console.log(
+          "Add signing secrets manually from the Resend dashboard, or run `pnpm resend:setup-webhooks` later.",
+        );
+      }
+    }
+
+    if (!getEnvValue(envContent, "RESEND_INBOUND_WEBHOOK_SECRET")) {
+      const inboundSecret = await promptEnvValue(
+        rl,
+        envContent,
+        "RESEND_INBOUND_WEBHOOK_SECRET",
+        {
+          label: "Resend inbound webhook signing secret",
+          required: true,
+        },
+      );
+      if (inboundSecret) {
+        envContent = setEnvLine(
+          envContent,
+          "RESEND_INBOUND_WEBHOOK_SECRET",
+          inboundSecret,
+        );
+      }
+    }
+
+    if (!getEnvValue(envContent, "RESEND_EVENTS_WEBHOOK_SECRET")) {
+      const eventsSecret = await promptEnvValue(
+        rl,
+        envContent,
+        "RESEND_EVENTS_WEBHOOK_SECRET",
+        {
+          label: "Resend events webhook signing secret",
+          required: false,
+        },
+      );
+      if (eventsSecret) {
+        envContent = setEnvLine(
+          envContent,
+          "RESEND_EVENTS_WEBHOOK_SECRET",
+          eventsSecret,
+        );
+      }
+    }
+
+    for (const entry of [
       {
         key: "SUPPORT_EMAIL",
         label: "Support sender email",
@@ -372,12 +464,6 @@ async function configureChannelsAndIntegrations(
         label: "Support sender name",
         required: true,
         defaultValue: "Support",
-      },
-      {
-        key: "NEXT_PUBLIC_APP_URL",
-        label: "Public app URL",
-        required: true,
-        defaultValue: "http://localhost:3000",
       },
     ] as const) {
       const value = await promptEnvValue(rl, envContent, entry.key, entry);
