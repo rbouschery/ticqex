@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type CustomFieldDefinition,
   type CustomFieldGroup,
@@ -20,6 +21,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api-client";
 import {
+  customFieldsAdminQueryKey,
+  useCustomFieldsAdmin,
+} from "@/hooks/use-custom-fields-admin";
+import {
   CustomFieldDefinitionDialog,
   type CustomFieldFormValues,
 } from "@/components/settings/custom-field-definition-dialog";
@@ -34,10 +39,12 @@ type SettingsWithLayout = {
 };
 
 export function CustomFieldsSection() {
+  const queryClient = useQueryClient();
+  const adminQuery = useCustomFieldsAdmin();
   const [fields, setFields] = useState<FieldRow[]>([]);
   const [catalog, setCatalog] = useState<TicketFieldCatalogEntry[]>([]);
   const [savedCatalog, setSavedCatalog] = useState<TicketFieldCatalogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [syncedAt, setSyncedAt] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
@@ -48,28 +55,18 @@ export function CustomFieldsSection() {
   const [deleteTarget, setDeleteTarget] = useState<FieldRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const [fieldData, settingsData] = await Promise.all([
-        apiFetch<FieldRow[]>("/api/v1/custom-fields"),
-        apiFetch<SettingsWithLayout>("/api/v1/settings"),
-      ]);
-      setFields(fieldData);
-      const nextCatalog = settingsData.ticket_field_layout?.catalog ?? [];
-      setCatalog(nextCatalog);
-      setSavedCatalog(nextCatalog);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load custom fields");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  if (adminQuery.dataUpdatedAt !== syncedAt && adminQuery.data) {
+    setSyncedAt(adminQuery.dataUpdatedAt);
+    setFields(adminQuery.data.fields);
+    setCatalog(adminQuery.data.catalog);
+    setSavedCatalog(adminQuery.data.catalog);
+  }
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount
-    void load();
-  }, [load]);
+  const reload = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: customFieldsAdminQueryKey });
+  }, [queryClient]);
+
+  const loading = adminQuery.isPending && !adminQuery.data;
 
   const ticketFields = useMemo(
     () =>
@@ -191,7 +188,7 @@ export function CustomFieldsSection() {
           }),
         });
         setFields((current) => [...current, created]);
-        await load();
+        reload();
       } else if (editingField) {
         const updated = await apiFetch<FieldRow>(
           `/api/v1/custom-fields/${editingField.id}`,
@@ -208,7 +205,7 @@ export function CustomFieldsSection() {
         setFields((current) =>
           current.map((f) => (f.id === editingField.id ? updated : f)),
         );
-        await load();
+        reload();
       }
       setError(null);
     } finally {
@@ -225,7 +222,7 @@ export function CustomFieldsSection() {
       });
       setFields((current) => current.filter((f) => f.id !== deleteTarget.id));
       setDeleteTarget(null);
-      await load();
+      reload();
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete field");

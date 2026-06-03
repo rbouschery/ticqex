@@ -1,30 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiFetch } from "@/lib/api-client";
 import { usePersistedExpanded } from "@/hooks/use-persisted-expanded";
-
-type ContactDetail = {
-  id: string;
-  username: string;
-  created_at: string;
-  ticket_count: number;
-  custom_fields: Record<string, unknown>;
-};
-
-type CustomFieldDefinition = {
-  id: string;
-  key: string;
-  label: string;
-  type: string;
-  position: number;
-};
+import {
+  useContactCustomFieldDefinitions,
+  useContactDetail,
+  type ContactCustomFieldDefinition,
+  type ContactDetail,
+} from "@/hooks/use-contact-detail";
 
 type CustomFieldRow = {
-  def: CustomFieldDefinition;
+  def: ContactCustomFieldDefinition;
   value: unknown;
 };
 
@@ -48,7 +37,7 @@ function hasCustomFieldValue(value: unknown): boolean {
 }
 
 function buildCustomFieldRows(
-  definitions: CustomFieldDefinition[],
+  definitions: ContactCustomFieldDefinition[],
   values: Record<string, unknown>,
 ): CustomFieldRow[] {
   return [...definitions]
@@ -76,7 +65,7 @@ function formatCustomFieldValue(type: string, value: unknown): string {
   }
 }
 
-export function TicketContactSection({
+function TicketContactSectionBody({
   contactId,
   displayName,
   contactAddress,
@@ -90,75 +79,27 @@ export function TicketContactSection({
     false,
   );
   const [showAllFields, setShowAllFields] = useState(false);
-  const [detail, setDetail] = useState<ContactDetail | null>(null);
-  const [definitions, setDefinitions] = useState<CustomFieldDefinition[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const contactQuery = useContactDetail(contactId, expanded);
+  const fieldsQuery = useContactCustomFieldDefinitions(expanded);
 
-    queueMicrotask(() => {
-      if (cancelled) return;
-      setDetail(null);
-      setDefinitions([]);
-      setError(null);
-      setShowAllFields(false);
-    });
+  const detail: ContactDetail | null = contactQuery.data ?? null;
+  const definitions = useMemo(
+    () => fieldsQuery.data ?? [],
+    [fieldsQuery.data],
+  );
+  const loading = contactQuery.isPending || fieldsQuery.isPending;
+  const error =
+    contactQuery.error instanceof Error
+      ? contactQuery.error.message
+      : fieldsQuery.error instanceof Error
+        ? fieldsQuery.error.message
+        : null;
 
-    return () => {
-      cancelled = true;
-    };
-  }, [contactId]);
-
-  useEffect(() => {
-    if (expanded) return;
-
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (!cancelled) {
-        setShowAllFields(false);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [expanded]);
-
-  useEffect(() => {
-    if (!expanded) return;
-
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (cancelled) return;
-      setLoading(true);
-      setError(null);
-
-      void Promise.all([
-        apiFetch<ContactDetail>(`/api/v1/contacts/${contactId}`),
-        apiFetch<CustomFieldDefinition[]>("/api/v1/custom-fields?group=contact"),
-      ])
-        .then(([contact, fields]) => {
-          if (!cancelled) {
-            setDetail(contact);
-            setDefinitions(fields);
-          }
-        })
-        .catch((e) => {
-          if (!cancelled) {
-            setError(e instanceof Error ? e.message : "Failed to load contact");
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [expanded, contactId]);
+  const handleToggleExpanded = () => {
+    if (expanded) setShowAllFields(false);
+    toggleExpanded();
+  };
 
   const showContactAddress =
     contactAddress &&
@@ -173,9 +114,10 @@ export function TicketContactSection({
     hasCustomFieldValue(value),
   ).length;
 
-  const visibleFieldRows = showAllFields
-    ? fieldRows
-    : fieldRows.filter(({ value }) => hasCustomFieldValue(value));
+  const visibleFieldRows =
+    expanded && showAllFields
+      ? fieldRows
+      : fieldRows.filter(({ value }) => hasCustomFieldValue(value));
 
   const hasHiddenFields = definitions.length > populatedFieldCount;
 
@@ -185,7 +127,7 @@ export function TicketContactSection({
         type="button"
         className="flex w-full items-center gap-2 border-b border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
         aria-expanded={expanded}
-        onClick={toggleExpanded}
+        onClick={handleToggleExpanded}
       >
         {expanded ? (
           <ChevronDown className="size-3.5 shrink-0" />
@@ -272,5 +214,24 @@ export function TicketContactSection({
         </div>
       )}
     </div>
+  );
+}
+
+export function TicketContactSection({
+  contactId,
+  displayName,
+  contactAddress,
+}: {
+  contactId: string;
+  displayName: string;
+  contactAddress?: string | null;
+}) {
+  return (
+    <TicketContactSectionBody
+      key={contactId}
+      contactId={contactId}
+      displayName={displayName}
+      contactAddress={contactAddress}
+    />
   );
 }

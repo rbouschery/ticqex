@@ -2,8 +2,8 @@
 
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useActionState, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { Suspense, useActionState, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,23 +27,20 @@ function LoginForm() {
     {},
   );
 
-  useEffect(() => {
-    if (authError) {
-      toast.error("Sign-in failed", {
-        description:
-          "Your session could not be restored. Please sign in again.",
-      });
-    }
-  }, [authError]);
-
-  useEffect(() => {
-    if (state.error) {
-      toast.error("Could not sign in", { description: state.error });
-    }
-  }, [state.error]);
-
   return (
     <form action={formAction} className="space-y-4">
+      {authError && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Your session could not be restored. Please sign in again.
+          </AlertDescription>
+        </Alert>
+      )}
+      {state.error && (
+        <Alert variant="destructive">
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
+      )}
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input

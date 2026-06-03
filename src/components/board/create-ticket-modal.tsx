@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,8 +22,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { TagMultiSelect } from "@/components/tags/tag-multi-select";
 import type { Tag } from "@/components/tags/types";
-import { apiFetch } from "@/lib/api-client";
 import { useRecentTags } from "@/hooks/use-recent-tags";
+import { useTicketTags } from "@/hooks/use-ticket-reference-data";
 import type { CreateTicketPayload } from "./board-create-client";
 
 export function CreateTicketModal({
@@ -40,17 +40,10 @@ export function CreateTicketModal({
   const [statusId, setStatusId] = useState(statuses[0]?.id ?? "");
   const [body, setBody] = useState("");
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const tagsQuery = useTicketTags();
+  const allTags = tagsQuery.data ?? [];
   const { recentNames, touch: touchRecentTags } = useRecentTags();
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void apiFetch<Tag[]>("/api/v1/tags")
-      .then(setAllTags)
-      .catch(() => {
-        // Tags are optional for create; picker still allows new tag names.
-      });
-  }, []);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();

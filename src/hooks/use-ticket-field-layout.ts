@@ -1,37 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { apiFetch } from "@/lib/api-client";
+import { useQuery } from "@tanstack/react-query";
 import type { ResolvedTicketFieldLayout } from "@shared/ticket-fields";
+import { apiFetch } from "@/lib/api-client";
+import { adminSettingsQueryKey } from "@/hooks/use-admin-settings";
 
-type SettingsWithLayout = {
-  ticket_field_layout?: ResolvedTicketFieldLayout;
-};
+const STALE_MS = 5 * 60_000;
 
 export function useTicketFieldLayoutFallback(
   layoutFromBoard: ResolvedTicketFieldLayout | null,
 ) {
-  const [fallbackLayout, setFallbackLayout] =
-    useState<ResolvedTicketFieldLayout | null>(null);
+  const query = useQuery({
+    queryKey: adminSettingsQueryKey,
+    queryFn: async () => {
+      const data = await apiFetch<{
+        ticket_field_layout?: ResolvedTicketFieldLayout;
+      }>("/api/v1/settings");
+      return data.ticket_field_layout ?? null;
+    },
+    enabled: !layoutFromBoard,
+    staleTime: STALE_MS,
+  });
 
-  useEffect(() => {
-    if (layoutFromBoard) return;
-
-    let cancelled = false;
-    void apiFetch<SettingsWithLayout>("/api/v1/settings")
-      .then((data) => {
-        if (!cancelled) {
-          setFallbackLayout(data.ticket_field_layout ?? null);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setFallbackLayout(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [layoutFromBoard]);
-
-  return layoutFromBoard ?? fallbackLayout;
+  return layoutFromBoard ?? query.data ?? null;
 }

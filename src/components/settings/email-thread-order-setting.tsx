@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -18,6 +19,11 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api-client";
+import { adminSettingsQueryKey } from "@/hooks/use-admin-settings";
+import {
+  ticketThreadOrderQueryKey,
+  useTicketThreadOrder,
+} from "@/hooks/use-ticket-reference-data";
 
 export type EmailThreadOrder = "oldest_first" | "newest_first";
 
@@ -35,32 +41,20 @@ const OPTIONS = [
 ];
 
 export function EmailThreadOrderSetting() {
-  const [order, setOrder] = useState<EmailThreadOrder | null>(null);
+  const queryClient = useQueryClient();
+  const threadOrderQuery = useTicketThreadOrder();
+  const [orderOverride, setOrderOverride] = useState<EmailThreadOrder | null>(
+    null,
+  );
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  const order = orderOverride ?? threadOrderQuery.data ?? null;
 
-    queueMicrotask(() => {
-      void apiFetch<{ email_thread_order?: EmailThreadOrder }>("/api/v1/settings")
-        .then((settings) => {
-          if (!cancelled) {
-            setOrder(settings.email_thread_order ?? "oldest_first");
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setOrder("oldest_first");
-        });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (!order) {
+  if (threadOrderQuery.isPending && order === null) {
     return <Skeleton className="h-9 w-full max-w-md" />;
   }
+
+  const resolvedOrder = order ?? "oldest_first";
 
   return (
     <Card>
@@ -73,18 +67,25 @@ export function EmailThreadOrderSetting() {
       <CardContent className="space-y-2">
         <Label htmlFor="email-thread-order">Message order</Label>
         <Select
-          value={order}
+          value={resolvedOrder}
           onValueChange={async (value: EmailThreadOrder) => {
-            const previous = order;
-            setOrder(value);
+            const previous = resolvedOrder;
+            setOrderOverride(value);
             setSaving(true);
             try {
               await apiFetch("/api/v1/settings", {
                 method: "PATCH",
                 body: JSON.stringify({ email_thread_order: value }),
               });
+              setOrderOverride(null);
+              void queryClient.invalidateQueries({
+                queryKey: ticketThreadOrderQueryKey,
+              });
+              void queryClient.invalidateQueries({
+                queryKey: adminSettingsQueryKey,
+              });
             } catch {
-              setOrder(previous);
+              setOrderOverride(previous);
             } finally {
               setSaving(false);
             }
@@ -103,7 +104,7 @@ export function EmailThreadOrderSetting() {
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          {OPTIONS.find((o) => o.value === order)?.description}
+          {OPTIONS.find((o) => o.value === resolvedOrder)?.description}
         </p>
       </CardContent>
     </Card>

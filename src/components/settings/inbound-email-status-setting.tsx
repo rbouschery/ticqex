@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,6 +13,11 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api-client";
+import {
+  adminSettingsQueryKey,
+  useAdminSettings,
+} from "@/hooks/use-admin-settings";
+import { useStatuses } from "@/hooks/use-statuses";
 
 type StatusOption = {
   id: string;
@@ -21,35 +27,20 @@ type StatusOption = {
 };
 
 export function InboundEmailStatusSetting() {
-  const [statuses, setStatuses] = useState<StatusOption[]>([]);
-  const [defaultInboundStatusId, setDefaultInboundStatusId] = useState<
+  const queryClient = useQueryClient();
+  const statusesQuery = useStatuses<StatusOption>();
+  const settingsQuery = useAdminSettings(true);
+  const [error, setError] = useState<string | null>(null);
+  const [overrideInboundStatusId, setOverrideInboundStatusId] = useState<
     string | null
   >(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const [data, settings] = await Promise.all([
-        apiFetch<StatusOption[]>("/api/v1/statuses"),
-        apiFetch<{ default_inbound_status_id: string | null }>(
-          "/api/v1/settings",
-        ),
-      ]);
-      setStatuses(data);
-      setDefaultInboundStatusId(settings.default_inbound_status_id);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load setting");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount
-    void load();
-  }, [load]);
+  const statuses = statusesQuery.data ?? [];
+  const defaultInboundStatusId =
+    overrideInboundStatusId ??
+    settingsQuery.data?.default_inbound_status_id ??
+    null;
+  const loading = statusesQuery.isPending || settingsQuery.isPending;
 
   const resolvedInboundStatusId =
     defaultInboundStatusId &&
@@ -75,15 +66,19 @@ export function InboundEmailStatusSetting() {
           value={resolvedInboundStatusId}
           onValueChange={async (value) => {
             const previous = defaultInboundStatusId;
-            setDefaultInboundStatusId(value);
+            setOverrideInboundStatusId(value);
             try {
               await apiFetch("/api/v1/settings", {
                 method: "PATCH",
                 body: JSON.stringify({ default_inbound_status_id: value }),
               });
+              setOverrideInboundStatusId(null);
+              void queryClient.invalidateQueries({
+                queryKey: adminSettingsQueryKey,
+              });
               setError(null);
             } catch (e) {
-              setDefaultInboundStatusId(previous);
+              setOverrideInboundStatusId(previous);
               setError(
                 e instanceof Error
                   ? e.message

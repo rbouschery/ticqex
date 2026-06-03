@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 function storageKey(prefix: string, userEmail: string) {
@@ -34,27 +34,21 @@ function writeExpanded(prefix: string, userEmail: string, expanded: boolean) {
 export function usePersistedExpanded(prefix: string, defaultExpanded: boolean) {
   const { user, loading } = useCurrentUser();
   const userEmail = user?.email ?? null;
+  const hydrationKey = loading ? "loading" : (userEmail ?? "anonymous");
+
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const [hydrated, setHydrated] = useState(false);
+  const [hydratedKey, setHydratedKey] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (loading) return;
-    let cancelled = false;
+  if (!loading && hydrationKey !== hydratedKey) {
+    setHydratedKey(hydrationKey);
+    setExpanded(
+      userEmail
+        ? readExpanded(prefix, userEmail, defaultExpanded)
+        : defaultExpanded,
+    );
+  }
 
-    queueMicrotask(() => {
-      if (cancelled) return;
-      setExpanded(
-        userEmail
-          ? readExpanded(prefix, userEmail, defaultExpanded)
-          : defaultExpanded,
-      );
-      setHydrated(true);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, userEmail, prefix, defaultExpanded]);
+  const hydrated = !loading && hydratedKey === hydrationKey;
 
   const toggleExpanded = useCallback(() => {
     setExpanded((prev) => {

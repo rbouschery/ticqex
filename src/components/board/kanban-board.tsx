@@ -4,7 +4,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -33,6 +32,7 @@ import { useBoardDrag } from "@/hooks/use-board-drag";
 import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardLaneLoadMore } from "@/hooks/use-board-lane-load-more";
 import { prefetchTicketReferenceData } from "@/hooks/use-ticket-reference-data";
+import { useStatuses } from "@/hooks/use-statuses";
 import {
   ticketSummaryQueryKey,
 } from "@/hooks/use-ticket-summary";
@@ -107,12 +107,13 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
     searchActive,
   });
 
-  const [allStatuses, setAllStatuses] = useState<
-    { id: string; name: string; color: string }[]
-  >([]);
+  const statusesQuery = useStatuses();
+  const allStatuses = useMemo(
+    () => statusesQuery.data ?? [],
+    [statusesQuery.data],
+  );
   const [showCreate, setShowCreate] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
-  const statusesLoaded = useRef(false);
 
   const openTicket = useCallback(
     (ticket: BoardTicket) => {
@@ -151,20 +152,10 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
   }, [lanes.length]);
 
   useEffect(() => {
-    prefetchTicketReferenceData(queryClient);
-  }, [queryClient]);
-
-  useEffect(() => {
-    if (statusesLoaded.current) return;
-    void apiFetch<{ id: string; name: string; color: string }[]>(
-      "/api/v1/statuses",
-    ).then(
-      (statuses) => {
-        setAllStatuses(statuses);
-        statusesLoaded.current = true;
-      },
-    );
-  }, []);
+    if (boardQuery.isSuccess) {
+      prefetchTicketReferenceData(queryClient);
+    }
+  }, [boardQuery.isSuccess, queryClient]);
 
   const setLanes = useCallback(
     (updater: React.SetStateAction<BoardLane[]>) => {

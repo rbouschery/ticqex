@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
@@ -45,6 +45,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-client";
+import { statusesQueryKey, useStatuses } from "@/hooks/use-statuses";
 
 export type StatusColumn = {
   id: string;
@@ -298,8 +299,12 @@ function DeleteStatusDialog({
 
 export function StatusColumnsSection() {
   const queryClient = useQueryClient();
-  const [statuses, setStatuses] = useState<StatusColumn[]>([]);
-  const [loading, setLoading] = useState(true);
+  const statusesQuery = useStatuses<StatusColumn>();
+  const statuses = useMemo(
+    () => statusesQuery.data ?? [],
+    [statusesQuery.data],
+  );
+  const loading = statusesQuery.isPending;
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#6366f1");
@@ -313,22 +318,12 @@ export function StatusColumnsSection() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  const load = useCallback(async () => {
-    try {
-      const data = await apiFetch<StatusColumn[]>("/api/v1/statuses");
-      setStatuses(data);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load statuses");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load statuses on mount
-    void load();
-  }, [load]);
+  const setStatusesCache = useCallback(
+    (updater: (current: StatusColumn[] | undefined) => StatusColumn[] | undefined) => {
+      queryClient.setQueryData(statusesQueryKey, updater);
+    },
+    [queryClient],
+  );
 
   const visibleCount = statuses.filter((s) => s.is_visible).length;
 
@@ -339,24 +334,24 @@ export function StatusColumnsSection() {
   const patchStatus = useCallback(
     async (id: string, patch: Partial<StatusColumn>) => {
       const previous = statuses;
-      setStatuses((current) =>
-        current.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+      setStatusesCache((current) =>
+        (current ?? []).map((s) => (s.id === id ? { ...s, ...patch } : s)),
       );
       try {
         const updated = await apiFetch<StatusColumn>(`/api/v1/statuses/${id}`, {
           method: "PATCH",
           body: JSON.stringify(patch),
         });
-        setStatuses((current) =>
-          current.map((s) => (s.id === id ? updated : s)),
+        setStatusesCache((current) =>
+          (current ?? []).map((s) => (s.id === id ? updated : s)),
         );
         invalidateBoard();
       } catch (e) {
-        setStatuses(previous);
+        setStatusesCache(() => previous);
         throw e;
       }
     },
-    [statuses, invalidateBoard],
+    [statuses, invalidateBoard, setStatusesCache],
   );
 
   async function onDragEnd(event: DragEndEvent) {
@@ -369,17 +364,17 @@ export function StatusColumnsSection() {
 
     const reordered = arrayMove(statuses, oldIndex, newIndex);
     const previous = statuses;
-    setStatuses(reordered);
+    setStatusesCache(() => reordered);
 
     try {
       const updated = await apiFetch<StatusColumn[]>("/api/v1/statuses/reorder", {
         method: "PUT",
         body: JSON.stringify({ ids: reordered.map((s) => s.id) }),
       });
-      setStatuses(updated);
+      setStatusesCache(() => updated);
       invalidateBoard();
     } catch (e) {
-      setStatuses(previous);
+      setStatusesCache(() => previous);
       setError(e instanceof Error ? e.message : "Failed to reorder statuses");
     }
   }
@@ -408,7 +403,9 @@ export function StatusColumnsSection() {
           deleteTarget.ticket_count > 0 ? { reassign_to: reassignTo } : {},
         ),
       });
-      setStatuses((current) => current.filter((s) => s.id !== deleteTarget.id));
+      setStatusesCache((current) =>
+        (current ?? []).filter((s) => s.id !== deleteTarget.id),
+      );
       invalidateBoard();
       closeDelete();
     } catch (e) {
@@ -475,7 +472,7 @@ export function StatusColumnsSection() {
                 is_visible: true,
               }),
             });
-            setStatuses((current) => [...current, created]);
+            setStatusesCache((current) => [...(current ?? []), created]);
             invalidateBoard();
             setNewName("");
             setNewColor("#6366f1");

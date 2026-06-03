@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import {
   Card,
   CardContent,
@@ -43,7 +43,11 @@ function ClientLogo({ id }: { id: ClientId }) {
 }
 
 export function McpSettingsSection() {
-  const [origin, setOrigin] = useState("");
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => "",
+  );
   const [selectedClientId, setSelectedClientId] =
     useState<ClientId>("cursor");
 
@@ -103,11 +107,6 @@ args = [
   const selectedExample =
     clientExamples.find((example) => example.id === selectedClientId) ??
     clientExamples[0]!;
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reflect current deployment URL in generated client config
-    setOrigin(window.location.origin);
-  }, []);
 
   return (
     <div className="space-y-4">

@@ -207,17 +207,6 @@ export function TicketModal({
   }, [summary, ticketId, queryClient, onBoardChange]);
 
   useEffect(() => {
-    let cancelled = false;
-    optimisticStatusRef.current = null;
-    queueMicrotask(() => {
-      if (!cancelled) setOptimisticStatusId(null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [ticketId]);
-
-  useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== "x" && e.key !== "X") return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;

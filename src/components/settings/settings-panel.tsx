@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -13,33 +14,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SettingsLayout } from "@/components/settings/settings-layout";
 import { SettingsSectionContent } from "@/components/settings/settings-section-content";
 import { ThemeSetting } from "@/components/settings/theme-setting";
-import { apiFetch } from "@/lib/api-client";
+import {
+  adminApiKeysQueryKey,
+  adminSettingsQueryKey,
+  useAdminApiKeys,
+  useAdminSettings,
+  type AdminApiKey,
+  type AdminSettings,
+} from "@/hooks/use-admin-settings";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   CORE_SETTINGS_SECTIONS,
   NON_ADMIN_SETTINGS_SECTIONS,
 } from "@shared/settings/core-sections";
 import { resolveSettingsSectionId } from "@shared/settings/resolve";
-import type { SettingsSectionDescriptor } from "@shared/settings/types";
-
-type Settings = {
-  email_signature?: string;
-  channels?: {
-    email?: {
-      enabled: boolean;
-      integration: string | null;
-    };
-  };
-  sections?: SettingsSectionDescriptor[];
-};
-
-type ApiKey = {
-  id: string;
-  name: string;
-  key_prefix: string;
-  created_at: string;
-};
-
 const SKELETON_SECTION_COUNT = CORE_SETTINGS_SECTIONS.length + 1;
 
 export function SettingsLoadingSkeleton() {
@@ -78,31 +66,23 @@ function SettingsPanelBody() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { user: me, loading: userLoading } = useCurrentUser();
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const isAdmin = me?.role === "admin";
 
-  const load = useCallback(async () => {
-    if (!isAdmin) return;
-    try {
-      const g = await apiFetch<Settings>("/api/v1/settings");
-      setSettings(g);
-      setApiKeys(await apiFetch<ApiKey[]>("/api/v1/api-keys"));
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load settings");
-    }
-  }, [isAdmin]);
+  const settingsQuery = useAdminSettings(isAdmin);
+  const apiKeysQuery = useAdminApiKeys(isAdmin);
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load admin settings on mount
-    void load();
-  }, [isAdmin, load]);
+  const settings = settingsQuery.data ?? null;
+  const apiKeys = apiKeysQuery.data ?? [];
+
+  const reload = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: adminSettingsQueryKey });
+    void queryClient.invalidateQueries({ queryKey: adminApiKeysQueryKey });
+  }, [queryClient]);
 
   const sectionParam = searchParams.get("section");
 
@@ -123,11 +103,8 @@ function SettingsPanelBody() {
   );
 
   useEffect(() => {
-    // Before /users/me resolves, isAdmin is false and sections is appearance-only;
-    // syncing early would strip ?section=board (etc.) from the URL.
     if (userLoading) return;
-    // Before GET /settings, admin sections omit channel sections (e.g. email).
-    if (isAdmin && settings === null) return;
+    if (isAdmin && settings === null && settingsQuery.isPending) return;
     if (sections.length === 0) return;
 
     if (sectionParam && sections.some((section) => section.id === sectionParam)) {
@@ -144,6 +121,7 @@ function SettingsPanelBody() {
     userLoading,
     isAdmin,
     settings,
+    settingsQuery.isPending,
     sections,
     sectionParam,
     pathname,
@@ -193,6 +171,24 @@ function SettingsPanelBody() {
     );
   }
 
+  if (settingsQuery.isError) {
+    const message =
+      settingsQuery.error instanceof Error
+        ? settingsQuery.error.message
+        : "Failed to load settings";
+    return (
+      <SettingsLayout
+        sections={CORE_SETTINGS_SECTIONS}
+        activeSectionId={activeSectionId}
+        title="Settings"
+      >
+        <Alert variant="destructive">
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
+      </SettingsLayout>
+    );
+  }
+
   if (!settings || !activeSection) {
     return <SettingsLoadingSkeleton />;
   }
@@ -211,13 +207,11 @@ function SettingsPanelBody() {
 
       <SettingsSectionContent
         section={activeSection}
-        settings={settings}
-        apiKeys={apiKeys}
+        settings={settings as AdminSettings}
+        apiKeys={apiKeys as AdminApiKey[]}
         newKey={newKey}
         onNewKey={setNewKey}
-        onReload={() => {
-          void load();
-        }}
+        onReload={reload}
         onCopyNewKey={() => {
           void copyNewKey();
         }}

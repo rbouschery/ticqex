@@ -30,6 +30,7 @@ export function BoardTicketModalRoute({ ticketId }: { ticketId: string }) {
 
   return (
     <TicketModal
+      key={ticketId}
       ticketId={ticketId}
       initialSeed={getInitialSeed(ticketId)}
       fieldLayout={ticketFieldLayout}

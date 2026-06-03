@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "@phosphor-icons/react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TagBadge } from "@/components/tags/tag-badge";
 import { DEFAULT_TAG_COLOR, type Tag } from "@/components/tags/types";
 import { apiFetch } from "@/lib/api-client";
+import {
+  ticketTagsQueryKey,
+  useTicketTags,
+} from "@/hooks/use-ticket-reference-data";
 
 type TagRow = Tag & { id: string };
 
@@ -143,8 +148,13 @@ function DeleteTagDialog({
 }
 
 export function TagsSection() {
-  const [tags, setTags] = useState<TagRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const tagsQuery = useTicketTags();
+  const tags = useMemo(
+    () => (tagsQuery.data ?? []) as TagRow[],
+    [tagsQuery.data],
+  );
+  const loading = tagsQuery.isPending;
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(DEFAULT_TAG_COLOR);
@@ -152,43 +162,33 @@ export function TagsSection() {
   const [deleteTarget, setDeleteTarget] = useState<TagRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await apiFetch<TagRow[]>("/api/v1/tags");
-      setTags(data);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load tags");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load tags on mount
-    void load();
-  }, [load]);
+  const setTagsCache = useCallback(
+    (updater: (current: TagRow[] | undefined) => TagRow[] | undefined) => {
+      queryClient.setQueryData(ticketTagsQueryKey, updater);
+    },
+    [queryClient],
+  );
 
   const patchTag = useCallback(
     async (id: string, patch: Partial<TagRow>) => {
       const previous = tags;
-      setTags((current) =>
-        current.map((tag) => (tag.id === id ? { ...tag, ...patch } : tag)),
+      setTagsCache((current) =>
+        (current ?? []).map((tag) => (tag.id === id ? { ...tag, ...patch } : tag)),
       );
       try {
         const updated = await apiFetch<TagRow>(`/api/v1/tags/${id}`, {
           method: "PATCH",
           body: JSON.stringify(patch),
         });
-        setTags((current) =>
-          current.map((tag) => (tag.id === id ? updated : tag)),
+        setTagsCache((current) =>
+          (current ?? []).map((tag) => (tag.id === id ? updated : tag)),
         );
       } catch (e) {
-        setTags(previous);
+        setTagsCache(() => previous);
         throw e;
       }
     },
-    [tags],
+    [tags, setTagsCache],
   );
 
   async function confirmDelete() {
@@ -196,8 +196,8 @@ export function TagsSection() {
     setDeleting(true);
     try {
       await apiFetch(`/api/v1/tags/${deleteTarget.id}`, { method: "DELETE" });
-      setTags((current) =>
-        current.filter((tag) => tag.id !== deleteTarget.id),
+      setTagsCache((current) =>
+        (current ?? []).filter((tag) => tag.id !== deleteTarget.id),
       );
       setDeleteTarget(null);
       setError(null);
@@ -259,8 +259,8 @@ export function TagsSection() {
               method: "POST",
               body: JSON.stringify({ name: trimmed, color: newColor }),
             });
-            setTags((current) =>
-              [...current, created].sort((a, b) =>
+            setTagsCache((current) =>
+              [...(current ?? []), created].sort((a, b) =>
                 a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
               ),
             );
