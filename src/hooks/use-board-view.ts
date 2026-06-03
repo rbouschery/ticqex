@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   normalizeTicketFilter,
   ticketFilterSchema,
@@ -21,6 +21,12 @@ type BoardViewState = {
   filter: TicketFilter;
   sort: BoardSort;
   searchQuery: string;
+};
+
+const DEFAULT_BOARD_VIEW: BoardViewState = {
+  filter: [],
+  sort: DEFAULT_BOARD_SORT,
+  searchQuery: "",
 };
 
 function readStoredView(): BoardViewState {
@@ -92,7 +98,11 @@ function writeStoredView(view: BoardViewState) {
 }
 
 export function useBoardView() {
-  const [view, setViewState] = useState<BoardViewState>(readStoredView);
+  const [view, setViewState] = useState<BoardViewState>(DEFAULT_BOARD_VIEW);
+
+  useEffect(() => {
+    setViewState(readStoredView());
+  }, []);
 
   const setFilter = useCallback((filter: TicketFilter) => {
     setViewState((prev) => {

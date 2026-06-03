@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api-client";
 import {
+  DEFAULT_BOARD_LANE_COUNT,
   readLastBoardLaneCount,
   writeLastBoardLaneCount,
 } from "@/lib/board-last-lane-count";
@@ -87,7 +89,16 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
   } = useBoardView();
 
   const [querySort, setQuerySort] = useState(sort);
-  const [skeletonLaneCount] = useState(() => readLastBoardLaneCount());
+
+  useEffect(() => {
+    setQuerySort(sort);
+  }, [sort]);
+
+  const skeletonLaneCount = useSyncExternalStore(
+    () => () => {},
+    () => readLastBoardLaneCount(),
+    () => DEFAULT_BOARD_LANE_COUNT,
+  );
 
   const boardQuery = useBoardQuery(filter, querySort, searchQuery);
   const lanes = boardQuery.data?.lanes ?? EMPTY_LANES;

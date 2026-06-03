@@ -1,5 +1,6 @@
 const STORAGE_KEY = "ticqex.board.lastLaneCount.v1";
-const DEFAULT_LANE_COUNT = 3;
+export const DEFAULT_BOARD_LANE_COUNT = 3;
+const DEFAULT_LANE_COUNT = DEFAULT_BOARD_LANE_COUNT;
 const MAX_LANE_COUNT = 24;
 
 function clampLaneCount(count: number): number {
