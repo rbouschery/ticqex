@@ -1,12 +1,13 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import type { Interface as ReadlineInterface } from "node:readline/promises";
 import {
-  createInterface,
-  type Interface as ReadlineInterface,
-} from "node:readline/promises";
-import { stdin as input, stdout as output } from "node:process";
+  closeReadline,
+  createReadline,
+  runPnpm,
+  runSupabase,
+} from "./lib/run-command";
 import {
   defaultTicqexConfig,
   loadTicqexConfig,
@@ -79,32 +80,6 @@ function parseSupabaseTarget(args: string[]): SupabaseTarget | null {
   if (!value) return null;
   if (value === "local" || value === "cloud" || value === "skip") return value;
   throw new Error("--supabase must be one of: local, cloud, skip");
-}
-
-function runPnpm(
-  args: string[],
-  options: { rl?: ReadlineInterface } = {},
-): void {
-  const { rl } = options;
-  // Release stdin while a child runs; otherwise readline blocks Supabase CLI prompts.
-  rl?.pause();
-
-  try {
-    console.log(`\n> pnpm ${args.join(" ")}`);
-    const result = spawnSync("pnpm", args, {
-      cwd: ROOT,
-      stdio: "inherit",
-    });
-
-    if (result.error) {
-      throw result.error;
-    }
-    if (result.status !== 0) {
-      throw new Error(`pnpm ${args.join(" ")} failed`);
-    }
-  } finally {
-    rl?.resume();
-  }
 }
 
 function readEnvContent(): string {
@@ -236,7 +211,7 @@ async function promptEnvValue(
 async function setupSupabase(
   rl: ReadlineInterface,
   requestedTarget: SupabaseTarget | null,
-): Promise<void> {
+): Promise<ReadlineInterface> {
   const target =
     requestedTarget ??
     (await promptChoice(
@@ -248,12 +223,11 @@ async function setupSupabase(
 
   if (target === "skip") {
     console.log("\nSkipping Supabase setup.");
-    return;
+    return rl;
   }
 
   if (target === "cloud") {
-    await setupCloudSupabase(rl);
-    return;
+    return setupCloudSupabase(rl);
   }
 
   const envContent = readEnvContent();
@@ -265,7 +239,7 @@ async function setupSupabase(
     defaultMode,
   );
 
-  if (mode === "skip") return;
+  if (mode === "skip") return rl;
 
   if (mode === "reset") {
     const confirmed = await promptYesNo(
@@ -273,14 +247,20 @@ async function setupSupabase(
       "Reset wipes the local Supabase database. Continue?",
       false,
     );
-    if (!confirmed) return;
-    runPnpm(["db:reset"], { rl });
+    if (!confirmed) return rl;
+    closeReadline(rl);
+    runSupabase(["db", "reset", "--yes"]);
+    rl = createReadline();
   } else {
-    runPnpm(["db:start"], { rl });
-    runPnpm(["db:bootstrap"], { rl });
+    closeReadline(rl);
+    runSupabase(["start"]);
+    rl = createReadline();
+    runPnpm(["db:bootstrap"]);
   }
 
-  runPnpm(["db:env"], { rl });
+  closeReadline(rl);
+  runPnpm(["db:env"]);
+  rl = createReadline();
 
   const seedAdmin = await promptYesNo(
     rl,
@@ -288,11 +268,13 @@ async function setupSupabase(
     mode !== "skip",
   );
   if (seedAdmin) {
-    runPnpm(["db:seed-admin"], { rl });
+    runPnpm(["db:seed-admin"]);
   }
+
+  return rl;
 }
 
-async function setupCloudSupabase(rl: ReadlineInterface): Promise<void> {
+async function setupCloudSupabase(rl: ReadlineInterface): Promise<ReadlineInterface> {
   console.log("\nCloud Supabase setup");
   console.log(
     "This links and optionally pushes migrations. It does not write cloud Supabase keys.",
@@ -303,22 +285,26 @@ async function setupCloudSupabase(rl: ReadlineInterface): Promise<void> {
     throw new Error("Supabase project ref is required for cloud setup.");
   }
 
-  runPnpm(["supabase", "link", "--project-ref", projectRef, "--yes"], { rl });
+  closeReadline(rl);
+  runSupabase(["link", "--project-ref", projectRef, "--yes"]);
 
+  let activeRl = createReadline();
   const pushMigrations = await promptYesNo(
-    rl,
+    activeRl,
     "Push local migrations to the linked cloud project?",
     false,
   );
   if (pushMigrations) {
     const confirmed = await promptYesNo(
-      rl,
+      activeRl,
       "This writes schema changes to the linked cloud database. Continue?",
       false,
     );
     if (confirmed) {
-      // Init already confirmed; --yes avoids a second prompt that stdin cannot answer.
-      runPnpm(["supabase", "db", "push", "--linked", "--yes"], { rl });
+      closeReadline(activeRl);
+      // Init already confirmed; --yes plus closed readline so the CLI owns stdin.
+      runSupabase(["db", "push", "--linked", "--yes"], { input: "y\n" });
+      activeRl = createReadline();
     }
   }
 
@@ -331,6 +317,8 @@ async function setupCloudSupabase(rl: ReadlineInterface): Promise<void> {
   console.log(
     "\nFind the values in Supabase project settings. The CLI intentionally does not fetch or store cloud keys.",
   );
+
+  return activeRl;
 }
 
 async function configureChannelsAndIntegrations(
@@ -523,17 +511,17 @@ async function configureChannelsAndIntegrations(
 
 async function init(args: string[]): Promise<void> {
   const supabaseTarget = parseSupabaseTarget(args);
-  const rl = createInterface({ input, output });
+  let rl = createReadline();
 
   try {
     console.log("Ticqex init\n");
-    await setupSupabase(rl, supabaseTarget);
+    rl = await setupSupabase(rl, supabaseTarget);
     await configureChannelsAndIntegrations(rl);
   } finally {
     rl.close();
   }
 
-  runPnpm(["config:sync"], { rl });
+  runPnpm(["config:sync"]);
   console.log(
     "\nInit complete. Run `pnpm config:check` and `pnpm env:verify` to validate setup.",
   );
