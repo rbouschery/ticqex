@@ -1,5 +1,6 @@
 "use client";
 
+import { createElement } from "react";
 import type { SettingsSectionDescriptor } from "@shared/settings/types";
 import { resolveSettingsSectionComponent } from "@/components/settings/settings-section-registry";
 
@@ -32,5 +33,5 @@ export function SettingsSectionContent(props: SettingsSectionContentProps) {
       </p>
     );
   }
-  return <Section {...props} />;
+  return createElement(Section, props);
 }
