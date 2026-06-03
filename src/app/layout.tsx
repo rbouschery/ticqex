@@ -23,6 +23,24 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Ticqex",
   description: "Agent-first support platform",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  themeColor: "#1a1a1a",
+  appleWebApp: {
+    title: "Ticqex",
+  },
+  other: {
+    "msapplication-TileColor": "#1a1a1a",
+    "msapplication-config": "/browserconfig.xml",
+  },
 };
 
 export default function RootLayout({
