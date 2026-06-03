@@ -113,7 +113,14 @@ function parseSupabaseTarget(args: string[]): SupabaseTarget | null {
   throw new Error("--supabase must be one of: local, cloud, skip");
 }
 
-function readEnvContent(): string {
+function readEnvContent(options: { createIfMissing?: boolean } = {}): string {
+  const createIfMissing = options.createIfMissing ?? true;
+  if (!createIfMissing && !fs.existsSync(ENV_FILE)) {
+    if (fs.existsSync(ENV_EXAMPLE)) {
+      return fs.readFileSync(ENV_EXAMPLE, "utf8");
+    }
+    return "";
+  }
   return readOrCreateEnvFile(ENV_FILE, ENV_EXAMPLE);
 }
 
@@ -225,9 +232,14 @@ async function promptEnvValue(
     label?: string;
     required?: boolean;
     defaultValue?: string;
+    cloudDeployEnv?: Record<string, string>;
   } = {},
 ): Promise<string> {
-  const existing = getEnvValue(content, key);
+  const cloudValue = options.cloudDeployEnv?.[key]?.trim();
+  const existing =
+    cloudValue && !isPlaceholderEnvValue(cloudValue)
+      ? cloudValue
+      : getEnvValue(content, key);
   const processValue = process.env[key];
   const hint = existing
     ? "leave blank to keep current"
@@ -488,15 +500,15 @@ async function promptVercelTeam(
   }
 }
 
-async function setupVercelDeployment(
+async function linkVercelForCloudInit(
   rl: ReadlineInterface,
   cloudDeployEnv: Record<string, string>,
-): Promise<ReadlineInterface> {
+): Promise<{ rl: ReadlineInterface; vercelScope?: string; linked: boolean }> {
   if (!isVercelCliAvailable()) {
     console.log(
       "\nVercel CLI not found. Install it globally, then re-run init to link and sync env vars.",
     );
-    return rl;
+    return { rl, linked: false };
   }
 
   const linkVercel = await promptYesNo(
@@ -504,7 +516,7 @@ async function setupVercelDeployment(
     "\nLink this repo to a Vercel project and sync env vars?",
     true,
   );
-  if (!linkVercel) return rl;
+  if (!linkVercel) return { rl, linked: false };
 
   let vercelScope: string | undefined;
   if (!isVercelLinked()) {
@@ -545,13 +557,21 @@ async function setupVercelDeployment(
   const productionUrl = resolveVercelProductionUrl(vercelScope);
   if (productionUrl) {
     cloudDeployEnv.NEXT_PUBLIC_APP_URL = productionUrl;
-    console.log(`\nSet NEXT_PUBLIC_APP_URL for Vercel: ${productionUrl}`);
+    console.log(`\nUsing Vercel production URL: ${productionUrl}`);
   } else {
     console.log(
-      "\nCould not resolve a production URL from Vercel yet. Deploy once, then re-run init or set NEXT_PUBLIC_APP_URL on Vercel manually.",
+      "\nCould not resolve a production URL from Vercel yet. Deploy once, then re-run init or set NEXT_PUBLIC_APP_URL during channel setup.",
     );
   }
 
+  return { rl, vercelScope, linked: true };
+}
+
+async function syncCloudDeployEnvToVercel(
+  rl: ReadlineInterface,
+  cloudDeployEnv: Record<string, string>,
+  vercelScope?: string,
+): Promise<ReadlineInterface> {
   closeReadline(rl);
   try {
     const pushed = pushEnvToVercel(cloudDeployEnv, vercelScope);
@@ -589,7 +609,7 @@ async function configureChannelsAndIntegrations(
     currentConfig.channels.email?.enabled ?? true,
   );
 
-  let envContent = readEnvContent();
+  let envContent = readEnvContent({ createIfMissing: !cloudDeployEnv });
   const nextConfig: TicqexConfig = {
     version: 1,
     channels: {
@@ -616,12 +636,17 @@ async function configureChannelsAndIntegrations(
       },
       {
         key: "NEXT_PUBLIC_APP_URL",
-        label: "App URL (local admin UI and links)",
+        label: cloudDeployEnv
+          ? "App URL (Vercel production / webhook base)"
+          : "App URL (local admin UI and links)",
         required: true,
-        defaultValue: "http://localhost:3000",
+        defaultValue: cloudDeployEnv?.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
       },
     ] as const) {
-      const value = await promptEnvValue(rl, envContent, entry.key, entry);
+      const value = await promptEnvValue(rl, envContent, entry.key, {
+        ...entry,
+        cloudDeployEnv,
+      });
       if (value) {
         envContent = setTrackedEnvLine(
           envContent,
@@ -639,7 +664,7 @@ async function configureChannelsAndIntegrations(
       getEnvValue(envContent, "NEXT_PUBLIC_APP_URL");
     let webhookAppUrl = appUrl && isHttpsAppUrl(appUrl) ? appUrl : null;
 
-    if (appUrl && !webhookAppUrl) {
+    if (appUrl && !webhookAppUrl && !cloudDeployEnv) {
       const tunnelUrl = await resolveLocalWebhookHttpsUrl({
         rl,
         localAppUrl: appUrl,
@@ -724,6 +749,7 @@ async function configureChannelsAndIntegrations(
         {
           label: "Resend inbound webhook signing secret",
           required: !webhookAppUrl,
+          cloudDeployEnv,
         },
       );
       if (inboundSecret) {
@@ -749,6 +775,7 @@ async function configureChannelsAndIntegrations(
         {
           label: "Resend events webhook signing secret",
           required: false,
+          cloudDeployEnv,
         },
       );
       if (eventsSecret) {
@@ -774,7 +801,10 @@ async function configureChannelsAndIntegrations(
         defaultValue: "Support",
       },
     ] as const) {
-      const value = await promptEnvValue(rl, envContent, entry.key, entry);
+      const value = await promptEnvValue(rl, envContent, entry.key, {
+        ...entry,
+        cloudDeployEnv,
+      });
       if (value) {
         envContent = setTrackedEnvLine(
           envContent,
@@ -808,9 +838,26 @@ async function init(args: string[]): Promise<void> {
     const supabaseContext = await setupSupabase(rl, supabaseTarget);
     rl = supabaseContext.rl;
     usedCloudSupabase = supabaseContext.usedCloudSupabase;
-    await configureChannelsAndIntegrations(rl, supabaseContext.cloudDeployEnv);
+
+    let vercelLink:
+      | { rl: ReadlineInterface; vercelScope?: string; linked: boolean }
+      | undefined;
     if (usedCloudSupabase && supabaseContext.cloudDeployEnv) {
-      rl = await setupVercelDeployment(rl, supabaseContext.cloudDeployEnv);
+      vercelLink = await linkVercelForCloudInit(
+        rl,
+        supabaseContext.cloudDeployEnv,
+      );
+      rl = vercelLink.rl;
+    }
+
+    await configureChannelsAndIntegrations(rl, supabaseContext.cloudDeployEnv);
+
+    if (vercelLink?.linked && supabaseContext.cloudDeployEnv) {
+      rl = await syncCloudDeployEnvToVercel(
+        rl,
+        supabaseContext.cloudDeployEnv,
+        vercelLink.vercelScope,
+      );
     }
   } finally {
     rl.close();
