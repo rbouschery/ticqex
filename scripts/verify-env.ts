@@ -3,6 +3,10 @@
  * Does not start services — run after `pnpm db:env` and before `pnpm dev`.
  * Email, Resend, and tunnel vars: use `pnpm config:check` (reads ticqex.config.json).
  */
+import { loadEnvLocalIfPresent } from "./lib/load-env-local";
+
+loadEnvLocalIfPresent();
+
 const checks: { name: string; ok: boolean; hint?: string }[] = [];
 
 function requireEnv(key: string, hint?: string) {

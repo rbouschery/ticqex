@@ -6,6 +6,9 @@ import {
   resolveConfigPath,
   validateTicqexConfig,
 } from "@server/config";
+import { loadEnvLocalIfPresent } from "./lib/load-env-local";
+
+loadEnvLocalIfPresent();
 
 const configPath = resolveConfigPath(process.env.TICQEX_CONFIG_FILE);
 
