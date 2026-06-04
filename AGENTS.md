@@ -6,103 +6,55 @@ contribution process lives in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## If asked to set up this repo for the user
 
-> **Note for agents:** When the user wants this repo running locally or in the
-> cloud, follow the steps below in order. Run commands yourself; do not only
-> paste instructions. Explain each choice briefly as you go. When setup succeeds
-> (health check OK, user can sign in), **ask the user whether to remove this
-> entire section from `AGENTS.md`** — it is meant as a one-time bootstrap aid,
-> not permanent repo documentation.
+`pnpm ticqex init` is local-only. Do not use it for Supabase Cloud or Vercel.
 
-### Concepts (explain briefly if the user is new)
-
-| Term | What it means here |
-|------|-------------------|
-| **Channel** | How support *reaches* Ticqex (e.g. `email` in `config/ticqex.config.json`). Channels are product-facing; today only email ships. |
-| **Integration** | The *provider* behind a channel (e.g. `resend` for email). Registered in `server/integrations/`; bound in config via `"integration": "resend"`. |
-| **Resend** | Third-party email API: outbound sends, inbound `email.received` webhooks. Needs `RESEND_API_KEY` and Svix signing secrets in `.env.local`. |
-| **`NEXT_PUBLIC_APP_URL`** | Public base URL Resend calls for webhooks. Local UI-only dev can stay `http://localhost:3000`. **Inbound email needs HTTPS** — use a tunnel URL here, not bare localhost. |
-| **Tunnel** | Public HTTPS proxy to `localhost:3000` (ngrok, Cloudflare Tunnel, etc.). Resend cannot POST to `http://localhost:3000`. Init can start ngrok or accept a pasted tunnel URL. |
-| **`ticqex.config.json`** | Committed activation file (which channels/integrations are on). Init may update it; cloud deploys should match what you enabled. |
-
-Webhook paths (when email is on): `{NEXT_PUBLIC_APP_URL}/api/webhooks/integrations/resend/inbound` and `.../events`. Re-register later with `pnpm resend:setup-webhooks --app-url <https-url>`.
-
-### Prerequisites (check before starting)
-
-1. **Node 20+** (repo pins Node 22 in `.nvmrc`) and **pnpm** installed.
-2. **Docker running** for local Supabase (`pnpm db:start`).
-3. **Email optional:** [Resend](https://resend.com/) account + API key (`re_…`) if the email channel stays enabled (default).
-4. **Inbound email locally:** [ngrok](https://ngrok.com/download) on PATH (or another tunnel the user will paste).
-5. **Cloud path:** [Supabase CLI](https://supabase.com/docs/guides/cli) and [Vercel CLI](https://vercel.com/docs/cli) installed and logged in (`supabase login`, `vercel login`).
-
-### Path A — Local setup (Kanban + API only, no email)
-
-Use when the user only needs the admin UI, REST, or MCP — not real inbound mail yet.
+### Local setup
 
 1. `pnpm install`
 2. `pnpm ticqex init`
-   - Supabase: choose **local** → **start** (or **reset** if they want a clean DB).
-   - When asked to enable the **email channel**, answer **no** (or disable email in config).
-3. If init did not seed an admin: `pnpm db:seed-admin` (credentials land in `.env.local` as `SEED_ADMIN_*`).
-4. `pnpm dev` — only one dev server; restart it yourself after env/API changes.
-5. Open **`http://localhost:3000`** (not `127.0.0.1`).
-6. Verify: `curl -s http://localhost:3000/api/health` → `{"status":"ok",...,"database":"ok"}`.
-7. Sign in with seed admin email/password from `.env.local`.
+   - Supabase: choose `local` then `start` or `reset`.
+   - For UI/API/MCP only, disable the email channel.
+   - For email, provide `RESEND_API_KEY`, support sender env vars, and webhook secrets.
+3. If inbound email is needed locally, `NEXT_PUBLIC_APP_URL` must be a public HTTPS tunnel URL, not `http://localhost:3000`. Use `ngrok http 3000` or another HTTPS tunnel, then register webhooks with `pnpm resend:setup-webhooks --app-url <https-url>`.
+4. Run `pnpm config:check`, `pnpm env:verify`, and `pnpm dev`.
+5. Verify `http://localhost:3000/api/health`, then sign in with the seed admin credentials.
 
-### Path B — Local setup (full stack including inbound email)
-
-1. Do **Path A** steps 1–2, but answer **yes** to enable email / Resend.
-2. Provide **`RESEND_API_KEY`** when prompted (or ensure it is already in `.env.local`).
-3. **Tunnel step (required for inbound):** when init explains Resend cannot reach localhost:
-   - **ngrok:** let init start `ngrok http 3000`, or run it yourself first; init reuses an existing ngrok on port 4040.
-   - **Other tunnel:** run Cloudflare Tunnel (or similar), paste the **HTTPS** URL when asked.
-   - Confirm setting **`NEXT_PUBLIC_APP_URL`** to that HTTPS URL (not `http://localhost:3000`).
-4. Set **support sender** (`SUPPORT_EMAIL`, `SUPPORT_FROM_NAME`) — must be a domain/sender Resend allows.
-5. Let init **register Resend webhooks** (writes `RESEND_INBOUND_WEBHOOK_SECRET` and `RESEND_EVENTS_WEBHOOK_SECRET`), or run later:
-   `pnpm resend:setup-webhooks --app-url https://your-tunnel-host`
-6. `pnpm config:check` — must pass with email enabled.
-7. `pnpm dev`; keep the **tunnel running** while testing inbound mail.
-8. Send a test email to the configured inbound address; confirm a ticket appears on the board.
-
-**If webhooks break** (tunnel URL changed, ngrok restarted): update `NEXT_PUBLIC_APP_URL` in `.env.local` and re-run `pnpm resend:setup-webhooks --app-url <new-https-url>`, then restart `pnpm dev`.
-
-### Path C — Cloud setup (Supabase Cloud + Vercel + email)
-
-1. User has (or will create) a **Supabase Cloud** project and **Vercel** project.
-2. `pnpm install`
-3. `pnpm ticqex init --supabase cloud` (or choose **cloud** interactively).
-4. Follow prompts: **link** Supabase project, **push migrations**, **bootstrap** DB, fetch API keys into `.env.local`, optional **cloud admin** user.
-5. **Vercel:** when asked, link existing project or create new; init syncs env vars and sets `NEXT_PUBLIC_APP_URL` from production URL when available.
-6. **Email:** keep channel on → `RESEND_API_KEY`, support From address, webhook registration against the **deployed HTTPS URL** (production or preview — must match what Resend will call).
-7. Deploy or ensure Vercel env vars match `.env.local` (init’s `pushEnvToVercel` helps).
-8. After deploy: hit `https://<vercel-host>/api/health`, sign in, optionally send a test inbound email.
-
-**Agent rule:** never run `supabase db push` / migrations against a remote project unless the user explicitly asked for cloud setup and understands data impact. Init’s cloud flow is the supported path.
-
-### Manual fallback (if `pnpm ticqex init` fails or user wants explicit control)
+Manual fallback:
 
 ```bash
 pnpm install
 pnpm db:start && pnpm db:env && pnpm db:bootstrap
-pnpm db:seed-admin   # optional
-# copy config/ticqex.config.example.json → config/ticqex.config.json if missing
+pnpm db:seed-admin
 pnpm dev
 ```
 
-For email: fill `.env.local` from `.env.example`, set tunnel HTTPS in `NEXT_PUBLIC_APP_URL`, run `pnpm resend:setup-webhooks --app-url <https-url>`, then `pnpm config:check`.
+### Manual cloud setup
 
-### Success checklist (tell the user what passed)
+Only do this when the user explicitly asks for cloud setup. Remote migrations affect a real Supabase database.
 
-- [ ] `pnpm config:check` exits 0 (when email is enabled, Resend vars present).
-- [ ] `/api/health` shows database OK.
-- [ ] User can sign in at `/` with admin credentials.
-- [ ] (Email path) Tunnel or deploy URL is HTTPS and matches `NEXT_PUBLIC_APP_URL`.
-- [ ] (Email path) Test inbound message creates a ticket.
+1. Create a Supabase Cloud project and copy the project ref.
+2. Link and migrate:
 
-### After setup succeeds
+   ```bash
+   supabase link --project-ref <project-ref>
+   supabase db push --linked
+   supabase db query --linked -f supabase/bootstrap.sql
+   ```
 
-1. Summarize what was configured (local vs cloud, email on/off, tunnel vs Vercel URL).
-2. Point to **Settings → API & MCP** if they want an agent API key.
-3. **Ask explicitly:** “Setup looks good. Do you want me to remove the **If asked to set up this repo for the user** section from `AGENTS.md`?” If yes, delete that section (from the heading through **After setup succeeds**) and leave the rest of the file intact.
+3. Copy Supabase env vars from Project Settings -> API Keys:
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
+4. Create/import the Vercel project and set Production + Preview env vars:
+   Supabase vars, `NEXT_PUBLIC_APP_URL`, and, if email is enabled, `RESEND_API_KEY`,
+   `RESEND_INBOUND_WEBHOOK_SECRET`, `RESEND_EVENTS_WEBHOOK_SECRET`,
+   `SUPPORT_EMAIL`, `SUPPORT_FROM_NAME`.
+5. Deploy once with `vercel deploy --prod`.
+6. If email is enabled, create a Resend API key, verify the sender/domain, run
+   `RESEND_API_KEY=re_... pnpm resend:setup-webhooks --app-url https://<vercel-host>`,
+   then copy the generated webhook secrets into Vercel and redeploy.
+7. Seed the first admin against cloud with `NEXT_PUBLIC_SUPABASE_URL`,
+   `SUPABASE_SECRET_KEY`, `SEED_ADMIN_EMAIL`, and `SEED_ADMIN_PASSWORD` in the shell:
+   `pnpm db:seed-admin`.
+8. Verify `https://<vercel-host>/api/health`, sign in, and test inbound email if enabled.
 
 ## What this project is
 
