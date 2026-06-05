@@ -44,7 +44,7 @@ INSERT INTO public.tickets (
   origin
 )
 SELECT
-  'Welcome to Ticqex',
+  'Welcome to ticqex',
   'task',
   'This is a sample task on the board. Edit the description in the ticket modal.',
   c.id,
@@ -82,7 +82,7 @@ LIMIT 1;
 INSERT INTO public.messages (ticket_id, body, visibility, author_type, channel)
 SELECT
   t.id,
-  'Thanks for trying Ticqex - this is a sample contact message.',
+  'Thanks for trying ticqex - this is a sample contact message.',
   'public',
   'contact',
   'admin'
@@ -94,6 +94,6 @@ INSERT INTO public.ticket_tags (ticket_id, tag_id)
 SELECT t.id, tag.id
 FROM public.tickets t
 CROSS JOIN public.tags tag
-WHERE t.title = 'Welcome to Ticqex'
+WHERE t.title = 'Welcome to ticqex'
   AND tag.name = 'feature'
 LIMIT 1;

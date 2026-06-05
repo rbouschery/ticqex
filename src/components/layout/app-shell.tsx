@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href="/board"
               className="font-heading text-lg font-semibold text-foreground"
             >
-              Ticqex
+              ticqex
             </Link>
             <Separator orientation="vertical" className="h-5" />
             <nav className="flex gap-1">

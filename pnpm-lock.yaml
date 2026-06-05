@@ -32,6 +32,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.100.14
         version: 5.100.14(react@19.2.7)
+      cal-sans:
+        specifier: ^1.0.1
+        version: 1.0.1
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2283,6 +2286,9 @@ packages:
   bytes@3.1.2:
     resolution: {integrity: sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==}
     engines: {node: '>= 0.8'}
+
+  cal-sans@1.0.1:
+    resolution: {integrity: sha512-XwN3/7jez8WmFVcNnNqO2K9lh133KiIcURCyGFnSM+ZmNZ8zIcOTNfr3SpenLAkRceYsq+fQNX/PL4C1rIkEPQ==}
 
   call-bind-apply-helpers@1.0.2:
     resolution: {integrity: sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==}
@@ -6580,6 +6586,8 @@ snapshots:
       run-applescript: 7.1.0
 
   bytes@3.1.2: {}
+
+  cal-sans@1.0.1: {}
 
   call-bind-apply-helpers@1.0.2:
     dependencies:
