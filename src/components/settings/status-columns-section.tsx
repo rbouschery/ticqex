@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
@@ -72,10 +72,11 @@ function SortableStatusRow({
   const [draftName, setDraftName] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftColor, setDraftColor] = useState(status.color);
-
-  useEffect(() => {
+  const [prevStatusColor, setPrevStatusColor] = useState(status.color);
+  if (status.color !== prevStatusColor) {
+    setPrevStatusColor(status.color);
     setDraftColor(status.color);
-  }, [status.color]);
+  }
 
   const {
     attributes,

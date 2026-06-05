@@ -30,7 +30,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { apiFetch, apiFetchText } from "@/lib/api-client";
+import { apiFetchText } from "@/lib/api-client";
 import { useCopyContextSettings } from "@/hooks/use-ticket-reference-data";
 import { cn } from "@/lib/utils";
 import {

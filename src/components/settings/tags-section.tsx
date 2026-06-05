@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "@phosphor-icons/react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -39,10 +39,11 @@ function TagRow({
   const [draftName, setDraftName] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftColor, setDraftColor] = useState(tag.color);
-
-  useEffect(() => {
+  const [prevTagColor, setPrevTagColor] = useState(tag.color);
+  if (tag.color !== prevTagColor) {
+    setPrevTagColor(tag.color);
     setDraftColor(tag.color);
-  }, [tag.color]);
+  }
 
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5">
