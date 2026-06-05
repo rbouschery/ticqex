@@ -209,21 +209,14 @@ export async function reorderStatuses(ids: string[]) {
     throw ApiError.badRequest("ids must include every status exactly once");
   }
 
-  // Unique index on position: move to temporary negative slots first, then
-  // assign final 0..n-1 order to avoid duplicate-key conflicts mid-update.
-  for (let i = 0; i < ids.length; i++) {
-    const { error } = await db
-      .from("status_types")
-      .update({ position: -(i + 1) })
-      .eq("id", ids[i]!);
-    if (error) throw ApiError.internal(error.message);
-  }
-  for (let i = 0; i < ids.length; i++) {
-    const { error } = await db
-      .from("status_types")
-      .update({ position: i })
-      .eq("id", ids[i]!);
-    if (error) throw ApiError.internal(error.message);
+  const { error } = await db.rpc("reorder_status_types", {
+    ordered_ids: ids,
+  });
+  if (error) {
+    if (error.message.includes("ids must include every status exactly once")) {
+      throw ApiError.badRequest("ids must include every status exactly once");
+    }
+    throw ApiError.internal(error.message);
   }
   return listStatuses();
 }

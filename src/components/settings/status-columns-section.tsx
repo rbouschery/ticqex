@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
@@ -71,6 +71,12 @@ function SortableStatusRow({
 }) {
   const [draftName, setDraftName] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [draftColor, setDraftColor] = useState(status.color);
+
+  useEffect(() => {
+    setDraftColor(status.color);
+  }, [status.color]);
+
   const {
     attributes,
     listeners,
@@ -109,19 +115,23 @@ function SortableStatusRow({
       <label className="relative shrink-0 cursor-pointer">
         <span
           className="block size-6 rounded-full ring-1 ring-border"
-          style={{ backgroundColor: status.color }}
+          style={{ backgroundColor: draftColor }}
         />
         <input
           type="color"
-          value={status.color}
+          value={draftColor}
           className="absolute inset-0 cursor-pointer opacity-0"
           aria-label={`Color for ${status.name}`}
-          onChange={async (e) => {
-            const color = e.target.value;
+          onChange={(e) => setDraftColor(e.target.value)}
+          onBlur={async () => {
+            if (draftColor === status.color) return;
             try {
-              await onPatch(status.id, { color });
+              await onPatch(status.id, { color: draftColor });
             } catch (err) {
-              onError(err instanceof Error ? err.message : "Failed to update color");
+              setDraftColor(status.color);
+              onError(
+                err instanceof Error ? err.message : "Failed to update color",
+              );
             }
           }}
         />
@@ -284,6 +294,7 @@ export function StatusColumnsSection() {
   const [adding, setAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<StatusColumn | null>(null);
   const [reassignTo, setReassignTo] = useState("");
+  const reorderQueueRef = useRef(Promise.resolve());
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -334,20 +345,29 @@ export function StatusColumnsSection() {
     if (oldIndex < 0 || newIndex < 0) return;
 
     const reordered = arrayMove(statuses, oldIndex, newIndex);
-    const previous = statuses;
     setStatusesCache(() => reordered);
 
-    try {
-      const updated = await apiFetch<StatusColumn[]>("/api/v1/statuses/reorder", {
-        method: "PUT",
-        body: JSON.stringify({ ids: reordered.map((s) => s.id) }),
+    reorderQueueRef.current = reorderQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        try {
+          const updated = await apiFetch<StatusColumn[]>(
+            "/api/v1/statuses/reorder",
+            {
+              method: "PUT",
+              body: JSON.stringify({ ids: reordered.map((s) => s.id) }),
+            },
+          );
+          setStatusesCache(() => updated);
+          invalidateBoard();
+          setError(null);
+        } catch (e) {
+          void queryClient.invalidateQueries({ queryKey: statusesQueryKey });
+          setError(
+            e instanceof Error ? e.message : "Failed to reorder statuses",
+          );
+        }
       });
-      setStatusesCache(() => updated);
-      invalidateBoard();
-    } catch (e) {
-      setStatusesCache(() => previous);
-      setError(e instanceof Error ? e.message : "Failed to reorder statuses");
-    }
   }
 
   function openDelete(status: StatusColumn) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "@phosphor-icons/react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -38,24 +38,31 @@ function TagRow({
 }) {
   const [draftName, setDraftName] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [draftColor, setDraftColor] = useState(tag.color);
+
+  useEffect(() => {
+    setDraftColor(tag.color);
+  }, [tag.color]);
 
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5">
       <label className="relative shrink-0 cursor-pointer">
         <span
           className="block size-6 rounded-full ring-1 ring-border"
-          style={{ backgroundColor: tag.color }}
+          style={{ backgroundColor: draftColor }}
         />
         <input
           type="color"
-          value={tag.color}
+          value={draftColor}
           className="absolute inset-0 cursor-pointer opacity-0"
           aria-label={`Color for ${tag.name}`}
-          onChange={async (e) => {
-            const color = e.target.value;
+          onChange={(e) => setDraftColor(e.target.value)}
+          onBlur={async () => {
+            if (draftColor === tag.color) return;
             try {
-              await onPatch(tag.id, { color });
+              await onPatch(tag.id, { color: draftColor });
             } catch (err) {
+              setDraftColor(tag.color);
               onError(
                 err instanceof Error ? err.message : "Failed to update color",
               );
