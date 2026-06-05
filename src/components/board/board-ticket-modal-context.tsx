@@ -44,3 +44,7 @@ export function useBoardTicketModalContext() {
   }
   return context;
 }
+
+export function useOptionalBoardTicketModalContext() {
+  return useContext(BoardTicketModalContext);
+}

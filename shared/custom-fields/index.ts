@@ -31,5 +31,23 @@ export {
   parseSelectOptions,
   slugifyLabelToKey,
   validateDefinitionOptions,
+  validateShowOpenInTicketForGroup,
   type CoercedCustomFieldValue,
 } from "./validation";
+
+export {
+  buildContactFieldRows,
+  hasCustomFieldDisplayValue,
+  hasCustomFieldValue,
+  isContactFieldProminent,
+  resolveContactFieldVisibility,
+  type ContactFieldRow,
+} from "./contact-visibility";
+
+export {
+  formatCustomFieldDisplayValue,
+  formatCustomFieldValue,
+  resolveOpenContactFieldsForDisplay,
+  type ContactOpenFieldDisplay,
+  type CustomFieldFormatMode,
+} from "./format";

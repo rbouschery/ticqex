@@ -7,6 +7,7 @@ import {
   normalizeSelectOptions,
   parseSelectOptions,
   validateDefinitionOptions,
+  validateShowOpenInTicketForGroup,
   type CustomFieldDefinition,
   type CustomFieldType,
 } from "@shared/custom-fields";
@@ -96,6 +97,14 @@ export function assertValidDefinitionOptions(
   if (message) throw ApiError.badRequest(message);
 }
 
+function assertValidShowOpenInTicket(
+  group: "ticket" | "contact",
+  showOpenInTicket: boolean | undefined,
+) {
+  const message = validateShowOpenInTicketForGroup(group, showOpenInTicket);
+  if (message) throw ApiError.badRequest(message);
+}
+
 async function countFieldValues(db: SupabaseClient, fieldId: string): Promise<number> {
   const { count, error } = await db
     .from("custom_field_values")
@@ -109,18 +118,26 @@ export async function loadCustomFieldsMap(
   db: SupabaseClient,
   entityType: "ticket" | "contact",
   entityIds: string[],
+  options?: { fieldIds?: string[] },
 ): Promise<Map<string, Record<string, unknown>>> {
   const result = new Map<string, Record<string, unknown>>();
   if (entityIds.length === 0) return result;
+  if (options?.fieldIds && options.fieldIds.length === 0) return result;
 
   for (const chunk of chunkArray(entityIds)) {
-    const { data: values, error } = await db
+    let query = db
       .from("custom_field_values")
       .select(
         "field_id, entity_id, value_text, value_number, value_date, value_boolean, value_json, custom_field_definitions!inner(id, key, type, group)",
       )
       .eq("entity_type", entityType)
       .in("entity_id", chunk);
+
+    if (options?.fieldIds) {
+      query = query.in("field_id", options.fieldIds);
+    }
+
+    const { data: values, error } = await query;
 
     if (error) throw ApiError.internal(error.message);
 
@@ -196,9 +213,11 @@ export async function setCustomFields(
 export async function listDefinitions(
   db: SupabaseClient,
   group?: "ticket" | "contact",
+  options?: { showOpenInTicket?: boolean },
 ): Promise<CustomFieldDefinition[]> {
   let q = db.from("custom_field_definitions").select("*").order("position");
   if (group) q = q.eq("group", group);
+  if (options?.showOpenInTicket) q = q.eq("show_open_in_ticket", true);
   const { data, error } = await q;
   if (error) throw ApiError.internal(error.message);
   return (data ?? []) as CustomFieldDefinition[];
@@ -214,9 +233,11 @@ export async function createDefinition(
     options?: Record<string, unknown> | null;
     required?: boolean;
     position?: number;
+    show_open_in_ticket?: boolean;
   },
 ) {
   assertValidDefinitionOptions(input.type, input.options ?? null);
+  assertValidShowOpenInTicket(input.group, input.show_open_in_ticket);
   const options = normalizeDefinitionOptions(input.type, input.options);
 
   const { data, error } = await db
@@ -228,6 +249,8 @@ export async function createDefinition(
       type: input.type,
       options,
       required: input.required ?? false,
+      show_open_in_ticket:
+        input.group === "contact" ? (input.show_open_in_ticket ?? false) : false,
       position: input.position ?? 0,
     })
     .select()
@@ -259,6 +282,10 @@ export async function updateDefinition(
       : (existing.options as Record<string, unknown> | null);
 
   assertValidDefinitionOptions(nextType, nextOptions);
+  assertValidShowOpenInTicket(
+    existing.group as "ticket" | "contact",
+    patch.show_open_in_ticket as boolean | undefined,
+  );
 
   if (patch.type !== undefined && patch.type !== existing.type) {
     const valueCount = await countFieldValues(db, id);

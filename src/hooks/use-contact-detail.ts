@@ -17,6 +17,9 @@ export type ContactCustomFieldDefinition = {
   label: string;
   type: string;
   position: number;
+  required: boolean;
+  show_open_in_ticket: boolean;
+  options: Record<string, unknown> | null;
 };
 
 const STALE_MS = 60_000;

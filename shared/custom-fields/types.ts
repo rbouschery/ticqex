@@ -31,6 +31,8 @@ export type CustomFieldDefinition = {
   type: CustomFieldType;
   options: Record<string, unknown> | null;
   required: boolean;
+  /** Contact fields: show in ticket contact panel without expanding "Show all fields". */
+  show_open_in_ticket: boolean;
   position: number;
   created_at?: string;
 };

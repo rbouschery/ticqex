@@ -52,6 +52,9 @@ export function CustomFieldsSection() {
   const [editingField, setEditingField] = useState<FieldRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [savingVisibility, setSavingVisibility] = useState(false);
+  const [savingContactVisibilityId, setSavingContactVisibilityId] = useState<
+    string | null
+  >(null);
   const [deleteTarget, setDeleteTarget] = useState<FieldRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -141,6 +144,41 @@ export function CustomFieldsSection() {
     setDialogGroup(field.group);
     setEditingField(field);
     setDialogOpen(true);
+  }
+
+  async function handleContactShowOpenChange(
+    field: FieldRow,
+    showOpen: boolean,
+  ) {
+    const previous = fields;
+    setFields((current) =>
+      current.map((f) =>
+        f.id === field.id ? { ...f, show_open_in_ticket: showOpen } : f,
+      ),
+    );
+    setSavingContactVisibilityId(field.id);
+    try {
+      const updated = await apiFetch<FieldRow>(
+        `/api/v1/custom-fields/${field.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ show_open_in_ticket: showOpen }),
+        },
+      );
+      setFields((current) =>
+        current.map((f) => (f.id === field.id ? updated : f)),
+      );
+      void queryClient.invalidateQueries({
+        queryKey: ["custom-fields", "contact"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["board"] });
+      setError(null);
+    } catch (e) {
+      setFields(previous);
+      setError(e instanceof Error ? e.message : "Failed to update visibility");
+    } finally {
+      setSavingContactVisibilityId(null);
+    }
   }
 
   async function handleReorder(group: CustomFieldGroup, orderedIds: string[]) {
@@ -294,6 +332,10 @@ export function CustomFieldsSection() {
             onEdit={openEdit}
             onDelete={setDeleteTarget}
             onAdd={openCreate}
+            onShowOpenChange={(field, showOpen) =>
+              void handleContactShowOpenChange(field, showOpen)
+            }
+            savingVisibilityId={savingContactVisibilityId}
           />
         </CardContent>
       </Card>

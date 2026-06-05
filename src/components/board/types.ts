@@ -25,6 +25,7 @@ type BoardTicketBase = {
   contact: { username: string; initials: string } | null;
   assignee: { username: string; initials: string } | null;
   custom_fields: Record<string, unknown>;
+  contact_open_fields: { label: string; value: string }[];
   tags: { id: string; name: string; color: string }[];
   card_surface: import("@shared/channels").TicketCardSurface;
   created_at: string;

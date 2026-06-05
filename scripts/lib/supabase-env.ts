@@ -30,9 +30,13 @@ export function validateSupabaseSeedEnv(
   }
 
   const normalizedUrl = normalizeSupabaseUrl(url);
-  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(normalizedUrl)) {
+  const isCloud = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(normalizedUrl);
+  const isLocal = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(
+    normalizedUrl,
+  );
+  if (!isCloud && !isLocal) {
     throw new Error(
-      `NEXT_PUBLIC_SUPABASE_URL must look like https://<project-ref>.supabase.co (got ${url})`,
+      `NEXT_PUBLIC_SUPABASE_URL must be a Supabase Cloud URL (https://<project-ref>.supabase.co) or local stack (http://127.0.0.1:54321) (got ${url})`,
     );
   }
 

@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { DotsThreeVerticalIcon, TrashIcon } from "@phosphor-icons/react";
+import {
+  ArrowsLeftRightIcon,
+  CopyIcon,
+  DotsThreeVerticalIcon,
+  TrashIcon,
+} from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarGroup } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,14 +18,20 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useOptionalBoardTicketModalContext } from "./board-ticket-modal-context";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { apiFetch } from "@/lib/api-client";
+import { apiFetch, apiFetchText } from "@/lib/api-client";
+import { useCopyContextSettings } from "@/hooks/use-ticket-reference-data";
 import { cn } from "@/lib/utils";
 import {
   TicketDeleteDialog,
@@ -84,19 +96,36 @@ function CardBadges({
 
 function TicketCardActions({
   ticket,
+  statusId,
   sortable,
   onOpen,
   onDeleted,
 }: {
   ticket: BoardTicket;
+  statusId?: string;
   sortable: boolean;
   onOpen: () => void;
   onDeleted?: (ticketId: string) => void;
 }) {
+  const boardContext = useOptionalBoardTicketModalContext();
+  const copyContextSettingsQuery = useCopyContextSettings();
+  const showCopyContext = copyContextSettingsQuery.data?.visible ?? true;
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [deleteDeleting, setDeleteDeleting] = useState(false);
+  const [moving, setMoving] = useState(false);
   const deleteCopy = ticketDeleteCopy(ticket.kind);
+
+  const canMove =
+    statusId != null &&
+    boardContext != null &&
+    boardContext.statuses.length > 0;
+  const moveDestinations = canMove
+    ? boardContext.statuses.filter((status) => status.id !== statusId)
+    : [];
+  const hasMenuItemsBeforeDelete =
+    (canMove && moveDestinations.length > 0) || showCopyContext;
+  const showActionsMenu = hasMenuItemsBeforeDelete || onDeleted != null;
 
   function openDeleteDialog() {
     setDeleteStep(1);
@@ -122,6 +151,33 @@ function TicketCardActions({
     }
   }
 
+  async function copyContext() {
+    try {
+      const text = await apiFetchText(`/api/v1/tickets/${ticket.id}/context`);
+      await navigator.clipboard.writeText(text);
+      toast.success("Context copied");
+    } catch {
+      toast.error("Could not copy context", {
+        description: "Failed to copy ticket context to clipboard.",
+      });
+    }
+  }
+
+  async function moveToStatus(toStatusId: string) {
+    if (!canMove || !statusId || toStatusId === statusId) return;
+    setMoving(true);
+    try {
+      await boardContext.onStatusChange(ticket.id, statusId, toStatusId);
+    } catch {
+      boardContext.onBoardChange();
+      toast.error("Could not move ticket", {
+        description: "The board was refreshed to match the server.",
+      });
+    } finally {
+      setMoving(false);
+    }
+  }
+
   return (
     <>
       <div
@@ -142,7 +198,7 @@ function TicketCardActions({
         >
           Open
         </Button>
-        {onDeleted ? (
+        {showActionsMenu ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -151,19 +207,53 @@ function TicketCardActions({
                 size="icon-sm"
                 className="text-muted-foreground hover:text-foreground"
                 aria-label="Ticket actions"
-                disabled={deleteDeleting}
+                disabled={deleteDeleting || moving}
               >
                 <DotsThreeVerticalIcon />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-44">
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={openDeleteDialog}
-              >
-                <TrashIcon />
-                {deleteCopy.label}
-              </DropdownMenuItem>
+              {canMove && moveDestinations.length > 0 ? (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger disabled={moving}>
+                    <ArrowsLeftRightIcon />
+                    Move to…
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {moveDestinations.map((status) => (
+                      <DropdownMenuItem
+                        key={status.id}
+                        disabled={moving}
+                        onClick={() => void moveToStatus(status.id)}
+                      >
+                        <span
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: status.color }}
+                        />
+                        {status.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              ) : null}
+              {showCopyContext ? (
+                <DropdownMenuItem onClick={() => void copyContext()}>
+                  <CopyIcon />
+                  Copy context
+                </DropdownMenuItem>
+              ) : null}
+              {hasMenuItemsBeforeDelete && onDeleted != null ? (
+                <DropdownMenuSeparator />
+              ) : null}
+              {onDeleted ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={openDeleteDialog}
+                >
+                  <TrashIcon />
+                  {deleteCopy.label}
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
@@ -188,6 +278,7 @@ function TicketCardActions({
 
 function TicketCardContent({
   ticket,
+  statusId,
   sortable,
   showActions,
   onOpen,
@@ -195,6 +286,7 @@ function TicketCardContent({
   fieldLayout,
 }: {
   ticket: BoardTicket;
+  statusId?: string;
   sortable: boolean;
   showActions: boolean;
   onOpen: () => void;
@@ -212,13 +304,14 @@ function TicketCardContent({
   return (
     <Card size="sm" className={cn("py-0", sortable && "pointer-events-none")}>
       <CardContent className="space-y-2 py-3">
-        <div className="flex items-start gap-2">
-          <h3 className="min-w-0 flex-1 text-sm font-medium text-foreground">
+        <div className="flex items-baseline gap-2">
+          <h3 className="min-w-0 flex-1 text-sm font-medium leading-none text-foreground">
             {ticket.title}
           </h3>
           {showActions ? (
             <TicketCardActions
               ticket={ticket}
+              statusId={statusId}
               sortable={sortable}
               onOpen={onOpen}
               onDeleted={onDeleted}
@@ -277,8 +370,22 @@ function TicketCardContent({
                     </Avatar>
                   </span>
                 </TooltipTrigger>
-                <TooltipContent side="top">
-                  {boardContactLabel(ticket)}
+                <TooltipContent
+                  side="top"
+                  className={cn(
+                    ticket.contact_open_fields.length > 0 &&
+                      "flex max-w-xs flex-col items-start gap-1 text-left",
+                  )}
+                >
+                  <span>{boardContactLabel(ticket)}</span>
+                  {ticket.contact_open_fields.map((field) => (
+                    <span
+                      key={field.label}
+                      className="text-background/80"
+                    >
+                      {field.label}: {field.value}
+                    </span>
+                  ))}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -310,6 +417,7 @@ function TicketCardContent({
 
 export function TicketCard({
   ticket,
+  statusId,
   onClick,
   onDeleted,
   dragOverlay = false,
@@ -317,6 +425,7 @@ export function TicketCard({
   fieldLayout,
 }: {
   ticket: BoardTicket;
+  statusId?: string;
   onClick: () => void;
   onDeleted?: (ticketId: string) => void;
   dragOverlay?: boolean;
@@ -368,6 +477,7 @@ export function TicketCard({
       )}
       <TicketCardContent
         ticket={ticket}
+        statusId={statusId}
         sortable={sortable && !dragOverlay}
         showActions={showActions}
         onOpen={onClick}

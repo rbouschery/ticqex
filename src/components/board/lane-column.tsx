@@ -62,6 +62,7 @@ export function LaneColumn({
           {previewIndex === index ? <DropPlaceholder /> : null}
           <TicketCard
             ticket={ticket}
+            statusId={lane.status.id}
             sortable={sortable}
             fieldLayout={fieldLayout}
             onClick={() => onTicketClick(ticket)}

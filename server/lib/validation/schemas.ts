@@ -1,8 +1,10 @@
+import { copyContextSettingsPatchSchema } from "@shared/copy-context";
 import { z } from "zod";
 import { ApiError } from "@server/lib/errors";
 import {
   CUSTOM_FIELD_TYPES,
   validateDefinitionOptions,
+  validateShowOpenInTicketForGroup,
 } from "@shared/custom-fields";
 
 const emailAddressSchema = z.string().email();
@@ -203,6 +205,7 @@ const customFieldDefinitionFieldsSchema = z.object({
   type: z.enum(CUSTOM_FIELD_TYPES),
   options: z.record(z.string(), z.unknown()).nullable().optional(),
   required: z.boolean().optional(),
+  show_open_in_ticket: z.boolean().optional(),
   position: z.number().int().optional(),
 });
 
@@ -212,9 +215,17 @@ export const createCustomFieldSchema = customFieldDefinitionFieldsSchema
     key: z.string().min(1).regex(/^[a-z][a-z0-9_]*$/),
   })
   .superRefine((data, ctx) => {
-    const message = validateDefinitionOptions(data.type, data.options ?? null);
-    if (message) {
-      ctx.addIssue({ code: "custom", message, path: ["options"] });
+    const optionsMessage = validateDefinitionOptions(data.type, data.options ?? null);
+    if (optionsMessage) {
+      ctx.addIssue({ code: "custom", message: optionsMessage, path: ["options"] });
+    }
+
+    const showOpenMessage = validateShowOpenInTicketForGroup(
+      data.group,
+      data.show_open_in_ticket,
+    );
+    if (showOpenMessage) {
+      ctx.addIssue({ code: "custom", message: showOpenMessage, path: ["show_open_in_ticket"] });
     }
   });
 
@@ -241,6 +252,7 @@ export const patchSettingsSchema = z.object({
   ticket_field_visibility: ticketFieldVisibilitySchema.optional(),
   email_signature: z.string().optional(),
   email_thread_order: z.enum(["oldest_first", "newest_first"]).optional(),
+  copy_context: copyContextSettingsPatchSchema.optional(),
 });
 
 export const createApiKeySchema = z.object({

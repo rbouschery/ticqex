@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { StatusColumnsSection } from "@/components/settings/status-columns-section";
 import { TagsSection } from "@/components/settings/tags-section";
+import { CopyContextSettingsSection } from "@/components/settings/copy-context-settings-section";
 
 export function BoardSettingsSection() {
   return (
@@ -38,6 +39,8 @@ export function BoardSettingsSection() {
           <TagsSection />
         </CardContent>
       </Card>
+
+      <CopyContextSettingsSection />
     </div>
   );
 }

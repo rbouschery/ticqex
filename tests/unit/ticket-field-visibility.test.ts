@@ -343,6 +343,60 @@ describe("filterTicketCardSurface", () => {
     ]);
   });
 
+  it("resolves custom field chip labels from definitions", () => {
+    const customFields = [
+      {
+        id: "11111111-1111-1111-1111-111111111111",
+        key: "urgency",
+        label: "Urgency",
+        type: "select",
+        position: 0,
+      },
+      {
+        id: "22222222-2222-2222-2222-222222222222",
+        key: "business_unit",
+        label: "Business Unit",
+        type: "select",
+        position: 1,
+      },
+    ];
+
+    const layout = resolveTicketFieldLayout({
+      settings: {
+        ticket_field_visibility: {
+          [customFieldId(customFields[0]!.id)]: {
+            showOnCard: true,
+            showInTicket: true,
+          },
+          [customFieldId(customFields[1]!.id)]: {
+            showOnCard: true,
+            showInTicket: true,
+          },
+        },
+      },
+      customFields,
+    });
+
+    const filtered = filterTicketCardSurface(
+      {
+        badges: [],
+        warning_badges: [],
+        preview: "",
+        chips: [
+          { sourceKey: "urgency", label: "urgency", value: "medium" },
+          { sourceKey: "business_unit", label: "business_unit", value: "Red" },
+        ],
+      },
+      layout,
+      customFields,
+    );
+
+    expect(filtered.chips).toEqual([
+      { sourceKey: "urgency", label: "Urgency", value: "medium" },
+      { sourceKey: "business_unit", label: "Business Unit", value: "Red" },
+    ]);
+  });
+
   it("uses chip source keys instead of display labels for custom fields", () => {
     const layout = resolveTicketFieldLayout({
       settings: {

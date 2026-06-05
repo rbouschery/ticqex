@@ -1,4 +1,8 @@
-import { isOptionListType, type CustomFieldType } from "./types";
+import {
+  isOptionListType,
+  type CustomFieldGroup,
+  type CustomFieldType,
+} from "./types";
 
 const KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -67,6 +71,17 @@ function coerceMultiselectItems(
     }
   }
   return normalized;
+}
+
+export function validateShowOpenInTicketForGroup(
+  group: CustomFieldGroup,
+  showOpenInTicket: boolean | undefined,
+): string | null {
+  if (showOpenInTicket === undefined) return null;
+  if (group !== "contact") {
+    return "show_open_in_ticket is only allowed for contact fields";
+  }
+  return null;
 }
 
 export function validateDefinitionOptions(

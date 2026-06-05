@@ -13,7 +13,7 @@ import {
 export function ticketDeleteCopy(kind: "task" | "conversation") {
   const isTask = kind === "task";
   return {
-    label: isTask ? "Delete task" : "Delete email conversation",
+    label: "Delete",
     title: isTask ? "Delete this task?" : "Delete this email conversation?",
     permanentTitle: isTask
       ? "Permanently delete this task?"

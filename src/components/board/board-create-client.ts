@@ -86,6 +86,7 @@ export function buildOptimisticBoardTicket(
       : null,
     assignee: null,
     custom_fields: {},
+    contact_open_fields: [],
     tags: payload.tags.map((tag) => ({
       id: tag.id ?? tag.name,
       name: tag.name,
@@ -129,6 +130,7 @@ export function ticketDetailToBoardTicket(detail: TicketDetail): BoardTicket {
         }
       : null,
     custom_fields: detail.custom_fields,
+    contact_open_fields: [],
     tags: detail.tags.map((tag) => ({
       id: tag.id ?? tag.name,
       name: tag.name,

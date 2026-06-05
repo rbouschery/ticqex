@@ -2,8 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { X } from "lucide-react";
-import { CopyIcon, DotsThreeVerticalIcon, TrashIcon } from "@phosphor-icons/react";
+import {
+  ArrowsLeftRightIcon,
+  CopyIcon,
+  DotsThreeVerticalIcon,
+  TrashIcon,
+} from "@phosphor-icons/react";
 import { getConversationOriginBadge } from "@shared/channels/ticket-origin-badge";
 import {
   CORE_TICKET_FIELD_IDS,
@@ -25,6 +31,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -45,6 +55,7 @@ import {
 } from "@/types/tickets";
 import type { TicketModalSeed } from "./board-ticket-seed";
 import {
+  useCopyContextSettings,
   useTicketTags,
   useTicketThreadOrder,
   useTicketUsers,
@@ -107,11 +118,13 @@ export function TicketModal({
   const usersQuery = useTicketUsers();
   const tagsQuery = useTicketTags();
   const threadOrderQuery = useTicketThreadOrder();
+  const copyContextSettingsQuery = useCopyContextSettings();
 
   const summary = summaryQuery.data;
   const users = usersQuery.data ?? [];
   const allTags = tagsQuery.data ?? [];
   const threadOrder = threadOrderQuery.data ?? "oldest_first";
+  const showCopyContext = copyContextSettingsQuery.data?.visible ?? true;
 
   const { recentNames, touch: touchRecentTags } = useRecentTags();
   const [saving, setSaving] = useState(false);
@@ -317,8 +330,15 @@ export function TicketModal({
   );
 
   async function copyContext() {
-    const text = await apiFetchText(`/api/v1/tickets/${ticketId}/context`);
-    await navigator.clipboard.writeText(text);
+    try {
+      const text = await apiFetchText(`/api/v1/tickets/${ticketId}/context`);
+      await navigator.clipboard.writeText(text);
+      toast.success("Context copied");
+    } catch {
+      toast.error("Could not copy context", {
+        description: "Failed to copy ticket context to clipboard.",
+      });
+    }
   }
 
   function openDeleteDialog() {
@@ -435,6 +455,14 @@ export function TicketModal({
     showTags ||
     (showDescription && !!summary && isTaskSummary(summary));
 
+  const moveDestinations = useMemo(
+    () =>
+      effectiveStatusId
+        ? statusOptions.filter((status) => status.id !== effectiveStatusId)
+        : [],
+    [statusOptions, effectiveStatusId],
+  );
+
   return (
     <>
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -480,16 +508,18 @@ export function TicketModal({
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="hidden sm:inline-flex"
-              onClick={() => void copyContext()}
-            >
-              <CopyIcon />
-              Copy context
-            </Button>
+            {showCopyContext ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="hidden sm:inline-flex"
+                onClick={() => void copyContext()}
+              >
+                <CopyIcon />
+                Copy context
+              </Button>
+            ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -503,13 +533,37 @@ export function TicketModal({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-44">
-                <DropdownMenuItem
-                  className="sm:hidden"
-                  onClick={() => void copyContext()}
-                >
-                  <CopyIcon />
-                  Copy context
-                </DropdownMenuItem>
+                {moveDestinations.length > 0 ? (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <ArrowsLeftRightIcon />
+                      Move to…
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {moveDestinations.map((status) => (
+                        <DropdownMenuItem
+                          key={status.id}
+                          onClick={() => changeStatus(status.id)}
+                        >
+                          <span
+                            className="size-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: status.color }}
+                          />
+                          {status.name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                ) : null}
+                {showCopyContext ? (
+                  <DropdownMenuItem onClick={() => void copyContext()}>
+                    <CopyIcon />
+                    Copy context
+                  </DropdownMenuItem>
+                ) : null}
+                {moveDestinations.length > 0 || showCopyContext ? (
+                  <DropdownMenuSeparator />
+                ) : null}
                 <DropdownMenuItem
                   variant="destructive"
                   onClick={openDeleteDialog}

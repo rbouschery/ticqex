@@ -1,5 +1,6 @@
 import { createAdminClient } from "@server/lib/supabase-admin";
 import { ApiError } from "@server/lib/errors";
+import { mergeCopyContextPatch, type CopyContextSettings } from "@shared/copy-context";
 import { mergeTicketFieldVisibilityPatch } from "@shared/ticket-fields";
 
 export async function getSettings() {
@@ -15,6 +16,20 @@ export async function getSettings() {
 
 export async function patchSettings(patch: Record<string, unknown>) {
   const db = createAdminClient();
+
+  if (patch.copy_context !== undefined) {
+    const { data: existingSettings, error: existingErr } = await db
+      .from("global_settings")
+      .select("copy_context")
+      .eq("id", 1)
+      .single();
+    if (existingErr) throw ApiError.internal(existingErr.message);
+
+    patch.copy_context = mergeCopyContextPatch(
+      existingSettings.copy_context,
+      patch.copy_context as Partial<CopyContextSettings>,
+    );
+  }
 
   if (patch.ticket_field_visibility !== undefined) {
     const { data: existingSettings, error: existingErr } = await db

@@ -15,6 +15,7 @@ function ticket(id: string): BoardTicket {
     contact: null,
     assignee: null,
     custom_fields: {},
+    contact_open_fields: [],
     tags: [],
     card_surface: {
       badges: [],
