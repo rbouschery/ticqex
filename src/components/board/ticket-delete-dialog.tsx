@@ -51,9 +51,17 @@ export function TicketDeleteDialog({
     onStepChange(1);
   }
 
+  function stopCardOpen(e: React.SyntheticEvent) {
+    e.stopPropagation();
+  }
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onClick={stopCardOpen}
+        onPointerDown={stopCardOpen}
+      >
         {step === 1 ? (
           <>
             <DialogHeader>
