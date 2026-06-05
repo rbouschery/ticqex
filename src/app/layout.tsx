@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
     ],
@@ -26,12 +28,12 @@ export const metadata: Metadata = {
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
-  themeColor: "#1a1a1a",
+  themeColor: "#1a1a1b",
   appleWebApp: {
     title: "Ticqex",
   },
   other: {
-    "msapplication-TileColor": "#1a1a1a",
+    "msapplication-TileColor": "#1a1a1b",
     "msapplication-config": "/browserconfig.xml",
   },
 };

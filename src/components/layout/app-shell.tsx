@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -22,8 +23,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-6">
             <Link
               href="/board"
-              className="font-heading text-lg font-semibold text-foreground"
+              className="flex items-center gap-2.5 font-heading text-lg font-semibold text-foreground"
             >
+              <Image
+                src="/icon-192x192.png"
+                alt=""
+                width={28}
+                height={28}
+                className="size-7 rounded-md"
+                priority
+              />
               ticqex
             </Link>
             <Separator orientation="vertical" className="h-5" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useActionState, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -91,7 +92,15 @@ export default function LoginPage() {
   return (
     <div className="flex flex-1 items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
-        <CardHeader>
+        <CardHeader className="items-center text-center">
+          <Image
+            src="/icon-192x192.png"
+            alt="Ticqex"
+            width={56}
+            height={56}
+            className="mb-1 size-14 rounded-xl"
+            priority
+          />
           <CardTitle>Ticqex</CardTitle>
           <CardDescription>Staff sign in</CardDescription>
         </CardHeader>
