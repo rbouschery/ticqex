@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-05T00:00:00.000Z",
+  "title": "Design System: Ticqex",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Pure Canvas",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 49)",
+          "oklch(0.25 0.004 49)",
+          "oklch(0.35 0.003 50)",
+          "oklch(0.45 0.003 52)",
+          "oklch(0.55 0.003 54)",
+          "oklch(0.70 0.002 56)",
+          "oklch(0.85 0.001 58)",
+          "oklch(1 0 0)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Deep Ink",
+        "canonical": "oklch(0.147 0.004 49.25)",
+        "tonalRamp": [
+          "oklch(0.12 0.004 49)",
+          "oklch(0.147 0.004 49.25)",
+          "oklch(0.20 0.005 52)",
+          "oklch(0.28 0.005 54)",
+          "oklch(0.38 0.006 56)",
+          "oklch(0.50 0.008 58)",
+          "oklch(0.65 0.010 58)",
+          "oklch(0.80 0.012 58)"
+        ]
+      },
+      "ink-soft": {
+        "role": "primary",
+        "displayName": "Ink Charcoal",
+        "canonical": "oklch(0.216 0.006 56.043)",
+        "tonalRamp": [
+          "oklch(0.12 0.005 56)",
+          "oklch(0.18 0.006 56)",
+          "oklch(0.216 0.006 56.043)",
+          "oklch(0.30 0.006 56)",
+          "oklch(0.40 0.006 56)",
+          "oklch(0.55 0.005 56)",
+          "oklch(0.70 0.004 56)",
+          "oklch(0.85 0.003 56)"
+        ]
+      },
+      "wash": {
+        "role": "neutral",
+        "displayName": "Soft Wash",
+        "canonical": "oklch(0.97 0.001 106.424)",
+        "tonalRamp": [
+          "oklch(0.20 0.003 106)",
+          "oklch(0.30 0.003 106)",
+          "oklch(0.40 0.002 106)",
+          "oklch(0.55 0.002 106)",
+          "oklch(0.70 0.001 106)",
+          "oklch(0.85 0.001 106)",
+          "oklch(0.93 0.001 106)",
+          "oklch(0.97 0.001 106.424)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Mid Gray",
+        "canonical": "oklch(0.553 0.013 58.071)",
+        "tonalRamp": [
+          "oklch(0.25 0.010 58)",
+          "oklch(0.35 0.011 58)",
+          "oklch(0.45 0.012 58)",
+          "oklch(0.553 0.013 58.071)",
+          "oklch(0.62 0.012 58)",
+          "oklch(0.72 0.011 58)",
+          "oklch(0.82 0.009 58)",
+          "oklch(0.92 0.006 58)"
+        ]
+      },
+      "signal": {
+        "role": "tertiary",
+        "displayName": "Signal Red",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": [
+          "oklch(0.30 0.18 27)",
+          "oklch(0.40 0.20 27)",
+          "oklch(0.50 0.22 27)",
+          "oklch(0.577 0.245 27.325)",
+          "oklch(0.65 0.22 27)",
+          "oklch(0.75 0.18 27)",
+          "oklch(0.85 0.12 27)",
+          "oklch(0.93 0.06 27)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "App wordmark and settings page titles only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Modal titles and settings section headings."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Ticket card titles and lane column headers."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Form copy, descriptions, and settings prose."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Badges, chips, counts, and metadata."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "API keys, MCP config, and code snippets."
+      }
+    },
+    "shadows": [
+      {
+        "name": "lift-drag",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        "purpose": "Kanban drag overlay and mobile FAB."
+      },
+      {
+        "name": "lift-reorder",
+        "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+        "purpose": "Settings list items while dragging."
+      },
+      {
+        "name": "float-panel",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "purpose": "Nested panels above board content."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+        "purpose": "Default transition-all on buttons and controls."
+      },
+      {
+        "name": "press-feedback",
+        "value": "transform 0.1s ease-out",
+        "purpose": "Active translate-y-px on button press."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default affirmative action; ink charcoal fill, tactile press.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Create ticket</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 0.45rem; background: oklch(0.216 0.006 56.043); color: oklch(0.985 0.001 106.423); font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1; cursor: pointer; transition: background 0.15s ease-out, transform 0.1s ease-out, box-shadow 0.15s ease-out; } .ds-btn-primary:hover { background: oklch(0.216 0.006 56.043 / 0.8); } .ds-btn-primary:focus-visible { outline: none; border-color: oklch(0.709 0.01 56.259); box-shadow: 0 0 0 3px oklch(0.709 0.01 56.259 / 0.5); } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Header nav and secondary icon actions.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">Board</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 0.45rem; background: transparent; color: oklch(0.147 0.004 49.25); font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background 0.15s ease-out; } .ds-btn-ghost:hover { background: oklch(0.97 0.001 106.424); } .ds-btn-ghost:focus-visible { outline: none; border-color: oklch(0.709 0.01 56.259); box-shadow: 0 0 0 3px oklch(0.709 0.01 56.259 / 0.5); } .ds-btn-ghost.ds-active { background: oklch(0.97 0.001 106.424); color: oklch(0.216 0.006 56.043); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Standard form field; 32px height, ring focus.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search tickets\" aria-label=\"Search tickets\" />",
+      "css": ".ds-input { display: block; width: 100%; height: 32px; padding: 4px 10px; border: 1px solid oklch(0.923 0.003 48.717); border-radius: 0.45rem; background: transparent; color: oklch(0.147 0.004 49.25); font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out; } .ds-input::placeholder { color: oklch(0.553 0.013 58.071); } .ds-input:focus-visible { outline: none; border-color: oklch(0.709 0.01 56.259); box-shadow: 0 0 0 3px oklch(0.709 0.01 56.259 / 0.5); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; background: oklch(0.923 0.003 48.717 / 0.5); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "Ticket and settings container; ring-bordered, no shadow at rest.",
+      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Payment failed on renewal</h3><p class=\"ds-card-preview\">Customer reports card declined twice this morning.</p></div>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: calc(0.45rem * 1.4); background: oklch(1 0 0); color: oklch(0.147 0.004 49.25); box-shadow: 0 0 0 1px oklch(0.147 0.004 49.25 / 0.1); font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; } .ds-card-title { margin: 0; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1; } .ds-card-preview { margin: 0; font-size: 0.75rem; line-height: 1.5; color: oklch(0.553 0.013 58.071); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge-default",
+      "description": "Status and metadata chip on ticket cards.",
+      "html": "<span class=\"ds-badge\">agent</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; justify-content: center; height: 20px; padding: 2px 8px; border-radius: 9999px; border: 1px solid transparent; background: oklch(0.216 0.006 56.043); color: oklch(0.985 0.001 106.423); font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 0.625rem; font-weight: 500; line-height: 1; white-space: nowrap; }"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "button-ghost",
+      "description": "Top app shell: wordmark + ghost nav with active wash fill.",
+      "html": "<header class=\"ds-header\"><a class=\"ds-wordmark\" href=\"#\">Ticqex</a><nav class=\"ds-nav\"><a class=\"ds-nav-link ds-active\" href=\"#\">Board</a><a class=\"ds-nav-link\" href=\"#\">Settings</a></nav></header>",
+      "css": ".ds-header { display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 16px; border-bottom: 1px solid oklch(0.923 0.003 48.717); background: oklch(1 0 0); } .ds-wordmark { font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 1.125rem; font-weight: 600; color: oklch(0.147 0.004 49.25); text-decoration: none; } .ds-nav { display: flex; gap: 4px; } .ds-nav-link { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 0.45rem; font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; color: oklch(0.147 0.004 49.25); text-decoration: none; transition: background 0.15s ease-out; } .ds-nav-link:hover { background: oklch(0.97 0.001 106.424); } .ds-nav-link.ds-active { background: oklch(0.97 0.001 106.424); color: oklch(0.216 0.006 56.043); }"
+    },
+    {
+      "name": "Lane Column",
+      "kind": "custom",
+      "refersTo": "card-default",
+      "description": "Kanban lane container with status dot and count badge.",
+      "html": "<section class=\"ds-lane\"><header class=\"ds-lane-header\"><span class=\"ds-status-dot\" style=\"background:#3b82f6\"></span><h2 class=\"ds-lane-title\">In progress</h2><span class=\"ds-lane-count\">4</span></header><div class=\"ds-lane-body\"></div></section>",
+      "css": ".ds-lane { display: flex; flex-direction: column; width: 288px; border-radius: calc(0.45rem * 1.4); background: oklch(0.97 0.001 106.424 / 0.5); box-shadow: inset 0 0 0 1px oklch(0.147 0.004 49.25 / 0.05); overflow: hidden; } .ds-lane-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid oklch(0.923 0.003 48.717); } .ds-status-dot { width: 8px; height: 8px; border-radius: 9999px; flex-shrink: 0; } .ds-lane-title { margin: 0; flex: 1; font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; color: oklch(0.147 0.004 49.25); } .ds-lane-count { display: inline-flex; align-items: center; height: 20px; padding: 2px 8px; border-radius: 9999px; background: oklch(0.97 0.001 106.424); color: oklch(0.216 0.006 56.043); font-size: 0.75rem; font-weight: 500; margin-left: auto; } .ds-lane-body { padding: 10px; min-height: 96px; }"
+    },
+    {
+      "name": "Ticket Card",
+      "kind": "custom",
+      "refersTo": "card-default",
+      "description": "Signature board card with title, badges, preview, and chips.",
+      "html": "<article class=\"ds-ticket-card\"><div class=\"ds-ticket-head\"><h3 class=\"ds-ticket-title\">Webhook timeout on deploy</h3><span class=\"ds-badge\">agent</span></div><p class=\"ds-ticket-preview\">Retried 3x; last failure 4m ago on /api/v1/tickets.</p><div class=\"ds-ticket-chips\"><span class=\"ds-chip\">email</span><span class=\"ds-chip\">priority: high</span></div></article>",
+      "css": ".ds-ticket-card { padding: 12px; border-radius: calc(0.45rem * 1.4); background: oklch(1 0 0); box-shadow: 0 0 0 1px oklch(0.147 0.004 49.25 / 0.1); font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; } .ds-ticket-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; } .ds-ticket-title { margin: 0; flex: 1; font-size: 0.875rem; font-weight: 500; line-height: 1; color: oklch(0.147 0.004 49.25); } .ds-ticket-preview { margin: 0 0 8px; font-size: 0.75rem; line-height: 1.5; color: oklch(0.553 0.013 58.071); } .ds-ticket-chips { display: flex; flex-wrap: wrap; gap: 4px; } .ds-chip { display: inline-flex; height: 20px; padding: 2px 8px; border-radius: 9999px; background: oklch(0.97 0.001 106.424); color: oklch(0.216 0.006 56.043); font-size: 0.625rem; font-weight: 500; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Control Room",
+    "overview": "Ticqex is a solo operator's desk for supervising agent-driven support. The visual system is technical, direct, and quiet: a monochrome control surface where ticket state, actor, and channel read faster than decoration. Density is a feature, not clutter; every pixel earns its place on the Kanban board or in settings.\n\nThe palette is deliberately restrained. Ink-on-canvas neutrals carry the UI; color appears where it carries meaning (status dots, tags, destructive signals, unread counts). Surfaces stay flat at rest and lift on interaction: rings and muted washes define structure, shadows appear only when something is grabbed, focused, or floating above the board.\n\nThis system explicitly rejects generic SaaS helpdesk clones, AI-slop scaffolding, and consumer/playful UI.",
+    "keyCharacteristics": [
+      "Monochrome-first with semantic color only (status, tags, errors, unread)",
+      "Compact controls (32px height) with tactile press feedback",
+      "Instrument Sans for headings, Source Sans 3 for body, Geist Mono for code",
+      "Flat tonal layering at rest; responsive lift on drag, FAB, and overlay states",
+      "Ring borders over heavy box shadows for card depth",
+      "Agent and human activity legible on cards before opening a ticket"
+    ],
+    "rules": [
+      {
+        "name": "The Earned Color Rule",
+        "body": "Saturated color appears only when it encodes state: lane status, tag, error, unread, or user-assigned status dot. Never as hero background, gradient text, or decorative stripe.",
+        "section": "colors"
+      },
+      {
+        "name": "The No-Cream Rule",
+        "body": "Body backgrounds stay at chroma 0 (pure canvas) or cool-tinted wash. Warm cream, sand, and parchment tints are prohibited.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Voice Rule",
+        "body": "Instrument Sans owns headings and navigation labels only. Source Sans 3 owns everything else. Geist Mono is reserved for machine-readable strings.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Subtitle Reflex Rule",
+        "body": "Page titles stand alone. Do not add a muted paragraph under every h1 or h2 that restates the heading.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces are flat and ring-bordered at rest. Shadows appear only as a response to drag, overlay, or floating panel state.",
+        "section": "elevation"
+      },
+      {
+        "name": "The No-Glass Rule",
+        "body": "Backdrop blur and glassmorphism are prohibited unless solving a specific legibility problem over busy content.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep body backgrounds pure canvas or cool wash; tint neutrals toward brand hue at chroma ≤0.015 only.",
+      "Do use Instrument Sans for headings and Source Sans 3 for body; reserve Geist Mono for API/MCP/code strings.",
+      "Do show agent vs human actor, channel, and status on ticket cards without opening the modal.",
+      "Do use ring borders and tonal washes for depth at rest; add shadow only on drag, overlay, or FAB.",
+      "Do keep controls at 32px height with visible focus rings and prefers-reduced-motion safe transitions.",
+      "Do label buttons with verb + object (Save changes, Delete ticket, Create ticket)."
+    ],
+    "donts": [
+      "Don't use generic SaaS helpdesk patterns: purple gradients, hero metrics, identical feature-card grids, or marketing filler inside admin surfaces.",
+      "Don't use AI-slop scaffolding: warm cream body backgrounds, gradient text, small-caps eyebrows on every section, or numbered section markers as decoration.",
+      "Don't use consumer/playful UI: mascot energy, bubbly oversized radii, loud accent colors, or delight-for-delight's-sake motion.",
+      "Don't use border-left or border-right greater than 1px as a colored accent stripe on cards, list items, or alerts.",
+      "Don't apply saturated color as page background or primary brand wash; status and semantic badges earn hue.",
+      "Don't add subtitles under page titles that restate the heading; descriptions teach constraints only.",
+      "Don't use bounce or elastic easing; transitions use ease-out curves, instant under prefers-reduced-motion: reduce."
+    ]
+  }
+}
