@@ -3,6 +3,7 @@ import { ApiError } from "@server/lib/errors";
 import { createAdminClient } from "@server/lib/supabase-admin";
 import { ensureEmailThread } from "@server/services/email-threading";
 import { createContactMessage } from "@server/services/messages";
+import { invalidateLaneSortCache } from "@server/services/board-lane-sort-cache";
 
 export type OpenConversationTicketInput = {
   origin: "api" | "email";
@@ -54,6 +55,8 @@ export async function openConversationTicket(
     .single();
 
   if (error) throw ApiError.internal(error.message);
+
+  invalidateLaneSortCache([input.statusId]);
 
   const ticketId = ticket.id;
 

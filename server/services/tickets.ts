@@ -29,6 +29,7 @@ import {
   removeTicketFromAllLaneOrders,
   syncTicketLaneOrderOnStatusChange,
 } from "@server/services/board-lane-orders";
+import { invalidateLaneSortCache } from "@server/services/board-lane-sort-cache";
 import { touchTicket } from "@server/services/ticket-touch";
 import type { AuthContext } from "@server/middleware/auth";
 import type { createTicketSchema } from "@server/lib/validation/schemas";
@@ -290,6 +291,8 @@ async function createTaskTicket(input: Extract<CreateTicketInput, { kind: "task"
     .single();
 
   if (error) throw ApiError.internal(error.message);
+
+  invalidateLaneSortCache([statusId]);
 
   if (input.tags?.length) await setTicketTags(ticket.id, input.tags);
   await setCustomFields(db, "ticket", ticket.id, input.custom_fields);
