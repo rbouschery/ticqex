@@ -6,11 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useActionState, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -92,7 +88,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="justify-items-center text-center">
           <Image
-            src="/icon-192x192.png"
+            src="/web-app-manifest-192x192.png"
             alt="Ticqex"
             width={56}
             height={56}

@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="flex items-center gap-2.5 font-heading text-lg font-semibold"
             >
               <Image
-                src="/icon-192x192.png"
+                src="/web-app-manifest-192x192.png"
                 alt=""
                 width={28}
                 height={28}
