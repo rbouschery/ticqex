@@ -2,9 +2,9 @@
 
 > Open-source, agent-first support platform — first-class REST API and MCP, with a realtime Kanban admin.
 
-[CI](https://github.com/rbouschery/ticqex/actions/workflows/ci.yml)
-[License: MIT](./LICENSE)
-Status: pre-1.0
+[![CI](https://github.com/rbouschery/ticqex/actions/workflows/ci.yml/badge.svg)](https://github.com/rbouschery/ticqex/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-orange.svg)
 
 Ticqex is an agentic infrastructure layer for support ticket management — designed to plug into the agent(s) and AI workflow of your choice. It provides the data model, APIs, and supervision surface; you plug in the intelligence.
 
