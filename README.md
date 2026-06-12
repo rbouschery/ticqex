@@ -6,12 +6,6 @@
   <strong>A thin UX and data layer for support and helpdesk — where humans and AI agents work the same queue, together.</strong>
 </p>
 
-<p align="center">
-  Built by
-  <a href="https://x.com/RBouschery"><img src="https://img.shields.io/badge/X-RBouschery-black?logo=x&logoColor=white" alt="X: @RBouschery"></a>
-  <a href="https://www.linkedin.com/in/rbouschery"><img src="https://img.shields.io/badge/LinkedIn-rbouschery-0A66C2?logo=linkedin&logoColor=white" alt="LinkedIn: rbouschery"></a>
-</p>
-
 <hr />
 
 <p align="center">
@@ -32,6 +26,12 @@ Tickets can be created manually, arrive through the API, or come in through chan
 Need a different channel? Use the channel and integration templates to build your own. Slack, chatbots, WordPress forms — if it can send a request, you can wire it up.
 
 Ticqex is built with Next.js and runs on Supabase, leveraging its Postgres database, authentication layer and storage.
+
+<p align="center">
+  Built by
+  <a href="https://x.com/RBouschery"><img src="https://img.shields.io/badge/X-RBouschery-black?logo=x&logoColor=white" alt="X: @RBouschery"></a>
+  <a href="https://www.linkedin.com/in/rbouschery"><img src="https://img.shields.io/badge/LinkedIn-rbouschery-0A66C2?logo=linkedin&logoColor=white" alt="LinkedIn: rbouschery"></a>
+</p>
 
 ## Quick start (local)
 
