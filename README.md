@@ -1,18 +1,21 @@
 <p align="center">
-  <img src="./public/web-app-manifest-192x192.png" alt="Ticqex logo" width="72" height="72">
+  <img src="./public/web-app-manifest-192x192.png" alt="Ticqex" width="96" height="96">
 </p>
 
-# Ticqex
+<p align="center">
+  <strong>A thin UX and data layer for support and helpdesk — where humans and AI agents work the same queue, together.</strong>
+</p>
 
-> A thin UX and data layer for support and helpdesk — where humans and AI agents work the same queue, together.
+<hr />
 
-Open-Source · Free
+<p align="center">
+  <a href="https://github.com/rbouschery/ticqex/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rbouschery/ticqex/ci.yml?branch=main&label=CI" alt="CI"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/rbouschery/ticqex" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/status-pre--1.0-orange" alt="Status: pre-1.0">
+  <img src="https://img.shields.io/badge/open--source-free-brightgreen" alt="Open-Source · Free">
+</p>
 
-[CI](https://github.com/rbouschery/ticqex/actions/workflows/ci.yml)
-[License: MIT](./LICENSE)
-Status: pre-1.0
-
-## About
+## What is Ticqex?
 
 Ticqex is a flexible, customizable support desk built on one idea: humans and AI agents are both first-class operators. Tickets live on a Kanban board for people to work, but every action — creating and editing tickets, adding lanes, defining custom fields — is equally available over API and MCP.
 
