@@ -1,33 +1,28 @@
 # Ticqex
 
-> Open-source, agent-first support platform — first-class REST API and MCP, with a realtime Kanban admin.
+> A thin UX and data layer for support and helpdesk — where humans and AI agents work the same queue, together.
+
+Open-Source · Free
 
 [![CI](https://github.com/rbouschery/ticqex/actions/workflows/ci.yml/badge.svg)](https://github.com/rbouschery/ticqex/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 ![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-orange.svg)
 
-Ticqex is an agentic infrastructure layer for support ticket management — designed to plug into the agent(s) and AI workflow of your choice. It provides the data model, APIs, and supervision surface; you plug in the intelligence.
+## About
 
-Every action is available over a typed REST API (`/api/v1/*`) and an MCP server,
-so agents are first-class operators that can triage, respond, and manage tickets
-— while humans stay in the loop on a realtime Kanban board.
+Ticqex is a flexible, customizable support desk built on one idea: humans and AI agents are both first-class operators. Tickets live on a Kanban board for people to work, but every action — creating and editing tickets, adding lanes, defining custom fields — is equally available over API and MCP.
 
-A composable channel and integration layer (registry-based) adapts the platform
-to however support reaches you. Email parsing ships onboard — inbound messages
-are parsed into tickets and replies are delivered via Resend — and new channels
-and providers plug in without touching the core.
+Ticqex is agent-agnostic. Plug in whatever agent you prefer — Claude, Codex, Cursor, Pi, OpenClaw, Hermes. If it can call an API or MCP, it works with Ticqex.
 
-Need a custom email provider, Slack, or Teams integration or something built for your custom workflow?
-Simply build a new channel or integration based on a template.
+Tickets can be created manually, arrive through the API, or come in through channels and integrations. Ticqex ships with a built-in email channel powered by Resend, so an inbound support email becomes a ticket that you — or your agent — can reply to in place, without juggling a separate inbox.
 
-Built on Supabase (Postgres, Auth, and Realtime) and Next.js (App Router), async
-email work runs in-process via Next.js `after()` — no external job runner
-required.
+Need a different channel? Use the channel and integration templates to build your own. Slack, chatbots, WordPress forms — if it can send a request, you can wire it up.
 
-Customize the board in the admin UI: status **lanes**, **custom fields**
-(text, select, multiselect, and more), and per-field **visibility** on Kanban cards.
+Ticqex is built with Next.js and runs on Supabase, leveraging its Postgres database, authentication layer and storage.
 
+## Getting Started
 
+Follow the steps in [Quick start](#quick-start) below, or view the Docs (coming soon).
 
 ## Quick start
 
