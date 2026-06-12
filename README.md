@@ -6,6 +6,12 @@
   <strong>A thin UX and data layer for support and helpdesk — where humans and AI agents work the same queue, together.</strong>
 </p>
 
+<p align="center">
+  Built by
+  <a href="https://x.com/RBouschery"><img src="https://img.shields.io/badge/X-RBouschery-black?logo=x&logoColor=white" alt="X: @RBouschery"></a>
+  <a href="https://www.linkedin.com/in/rbouschery"><img src="https://img.shields.io/badge/LinkedIn-rbouschery-0A66C2?logo=linkedin&logoColor=white" alt="LinkedIn: rbouschery"></a>
+</p>
+
 <hr />
 
 <p align="center">
