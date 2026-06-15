@@ -144,7 +144,7 @@ MCP tools mirror the REST mutations agents need (tickets, board moves, messages,
 
 ### Agent CLI (`@ticqex/cli`)
 
-For shell-based agents and scripts, use the published CLI (or `node packages/cli/dist/main.js` from this repo after `pnpm --filter @ticqex/cli build`):
+For shell-based agents and scripts, use the published CLI (or `node packages/cli/dist/main.js` from this repo after `pnpm --filter @ticqex/cli... build`):
 
 ```bash
 ticqex auth login --instance https://your-instance.example.com

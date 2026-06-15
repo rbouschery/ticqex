@@ -9,7 +9,7 @@ Full request schemas: [`docs/openapi.yaml`](../../docs/openapi.yaml) in the repo
 From the monorepo:
 
 ```bash
-pnpm --filter @ticqex/cli build
+pnpm --filter @ticqex/cli... build
 node packages/cli/dist/main.js --help
 ```
 
