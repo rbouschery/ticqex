@@ -27,7 +27,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
     "test": "vitest run",
     "prepublishOnly": "pnpm run build"
   },
@@ -36,11 +36,12 @@
   },
   "dependencies": {
     "@ticqex/api-client": "workspace:*",
-    "@ticqex/api-spec": "workspace:*",
     "commander": "^14.0.0"
   },
   "devDependencies": {
+    "@ticqex/api-spec": "workspace:*",
     "@types/node": "^25",
+    "tsup": "^8.5.1",
     "typescript": "^5",
     "vitest": "^4.1.8"
   },
