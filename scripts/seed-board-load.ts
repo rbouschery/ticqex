@@ -105,8 +105,8 @@ async function main() {
     inserted += batch.length;
   }
 
-  const doneStatus =
-    statuses.find((s) => s.name === "Done")?.id ?? statusIds[0]!;
+  const closedStatus =
+    statuses.find((s) => s.name === "Closed")?.id ?? statusIds[0]!;
   const needleUpdatedAt = new Date(baseTime + 60_000).toISOString();
 
   const { data: needle, error: needleErr } = await db
@@ -117,7 +117,7 @@ async function main() {
       channel: "email",
       contact_address: "needle@example.com",
       contact_id: contact.id,
-      status_id: doneStatus,
+      status_id: closedStatus,
       origin: "manual",
       updated_at: needleUpdatedAt,
       created_at: needleUpdatedAt,

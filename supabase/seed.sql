@@ -8,9 +8,10 @@ INSERT INTO public.status_types (name, color, position)
 SELECT v.name, v.color, v.position
 FROM (
   VALUES
-    ('New', '#3b82f6', 0),
+    ('Open', '#3b82f6', 0),
     ('In Process', '#f59e0b', 1),
-    ('Done', '#22c55e', 2)
+    ('Human Review', '#8b5cf6', 2),
+    ('Closed', '#22c55e', 3)
 ) AS v(name, color, position)
 WHERE NOT EXISTS (SELECT 1 FROM public.status_types);
 
@@ -33,7 +34,7 @@ INSERT INTO public.contacts (username)
 VALUES ('demo@example.com');
 
 INSERT INTO public.tags (name, color)
-VALUES ('bug', '#ef4444'), ('feature', '#8b5cf6');
+VALUES ('bug', '#ef4444'), ('feature request', '#8b5cf6');
 
 INSERT INTO public.tickets (
   title,
@@ -53,7 +54,7 @@ SELECT
 FROM public.contacts c
 CROSS JOIN public.status_types s
 WHERE c.username = 'demo@example.com'
-  AND s.name = 'New'
+  AND s.name = 'Open'
 LIMIT 1;
 
 INSERT INTO public.tickets (
@@ -95,5 +96,5 @@ SELECT t.id, tag.id
 FROM public.tickets t
 CROSS JOIN public.tags tag
 WHERE t.title = 'Welcome to ticqex'
-  AND tag.name = 'feature'
+  AND tag.name = 'feature request'
 LIMIT 1;

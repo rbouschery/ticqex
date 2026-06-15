@@ -5,9 +5,10 @@ INSERT INTO public.status_types (name, color, position)
 SELECT v.name, v.color, v.position
 FROM (
   VALUES
-    ('New', '#3b82f6', 0),
+    ('Open', '#3b82f6', 0),
     ('In Process', '#f59e0b', 1),
-    ('Done', '#22c55e', 2)
+    ('Human Review', '#8b5cf6', 2),
+    ('Closed', '#22c55e', 3)
 ) AS v(name, color, position)
 WHERE NOT EXISTS (SELECT 1 FROM public.status_types);
 
