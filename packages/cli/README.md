@@ -10,8 +10,11 @@ From the monorepo:
 
 ```bash
 pnpm --filter @ticqex/cli build
-pnpm exec ticqex --help
+node packages/cli/dist/main.js --help
 ```
+
+For other local monorepo commands, replace `ticqex` with
+`node packages/cli/dist/main.js`.
 
 When published to npm:
 
