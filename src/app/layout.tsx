@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -17,10 +17,13 @@ export const metadata: Metadata = {
   title: "Ticqex",
   description: "Agent-first support platform",
   manifest: "/manifest.json",
-  themeColor: "#1a1a1b",
   appleWebApp: {
     title: "Ticqex",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1a1a1b",
 };
 
 export default function RootLayout({
