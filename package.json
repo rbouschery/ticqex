@@ -54,7 +54,8 @@
     "test:packages": "pnpm --filter @ticqex/api-spec --filter @ticqex/api-client --filter @ticqex/cli test",
     "openapi:generate": "pnpm --filter @ticqex/api-spec build && tsx scripts/generate-openapi.ts",
     "openapi:check": "pnpm --filter @ticqex/api-spec build && tsx scripts/generate-openapi.ts --check",
-    "seed:board-load": "tsx --env-file=.env.local scripts/seed-board-load.ts"
+    "seed:board-load": "tsx --env-file=.env.local scripts/seed-board-load.ts",
+    "seed:long-email-demo": "tsx --env-file=.env.local scripts/seed-long-email-demo.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

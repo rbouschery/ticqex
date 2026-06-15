@@ -173,156 +173,160 @@ export function EmailCompose({
       </button>
 
       {hydrated && expanded && (
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <form
-            onSubmit={(e) => void handleSubmit(e)}
-            className="p-4"
-          >
-      <div className="mb-3 space-y-3">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="xs"
-            variant={!replyAll ? "default" : "outline"}
-            onClick={() => handleReplyMode(false)}
-          >
-            Reply
-          </Button>
-          <Button
-            type="button"
-            size="xs"
-            variant={replyAll ? "default" : "outline"}
-            onClick={() => handleReplyMode(true)}
-          >
-            Reply all
-          </Button>
-        </div>
+        <form
+          onSubmit={(e) => void handleSubmit(e)}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4"
+        >
+          <div className="mb-3 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="xs"
+                variant={!replyAll ? "default" : "outline"}
+                onClick={() => handleReplyMode(false)}
+              >
+                Reply
+              </Button>
+              <Button
+                type="button"
+                size="xs"
+                variant={replyAll ? "default" : "outline"}
+                onClick={() => handleReplyMode(true)}
+              >
+                Reply all
+              </Button>
+            </div>
 
-        <div className="space-y-2">
-          <Label>To</Label>
-          <Input readOnly value={contactEmail} className="cursor-not-allowed opacity-70" />
-        </div>
+            <div className="space-y-2">
+              <Label>To</Label>
+              <Input
+                readOnly
+                value={contactEmail}
+                className="cursor-not-allowed opacity-70"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label>Cc</Label>
-          <CcChipInput cc={cc} onChange={setCc} />
-        </div>
+            <div className="space-y-2">
+              <Label>Cc</Label>
+              <CcChipInput cc={cc} onChange={setCc} />
+            </div>
 
-        <div className="space-y-2">
-          <Label>Subject</Label>
-          <Input
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <Textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        rows={5}
-        placeholder="Write your reply…"
-      />
-
-      <div className="mt-2 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="include-quote"
-            checked={includeQuote}
-            onCheckedChange={(checked) => setIncludeQuote(checked === true)}
-          />
-          <Label htmlFor="include-quote" className="text-xs">
-            Include quoted text
-          </Label>
-        </div>
-
-        {snippets.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Label className="text-xs">Snippet</Label>
-            <Select
-              value={snippetId || undefined}
-              onValueChange={insertSnippet}
-            >
-              <SelectTrigger size="sm" className="w-40">
-                <SelectValue placeholder="Insert snippet…" />
-              </SelectTrigger>
-              <SelectContent>
-                {snippets.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label>Subject</Label>
+              <Input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </div>
           </div>
-        )}
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={(e) => void handleFileSelect(e.target.files)}
-        />
-        <Button
-          type="button"
-          variant="link"
-          size="xs"
-          disabled={uploading}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <PaperclipIcon />
-          {uploading ? "Uploading…" : "Attach files"}
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          Max {maxAttachmentSizeLabel()} per file
-        </span>
-      </div>
+          <Textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={5}
+            placeholder="Write your reply…"
+          />
 
-      {attachments.length > 0 && (
-        <ul className="mt-2 flex flex-wrap gap-2">
-          {attachments.map((att) => (
-            <li key={att.id}>
-              <Badge variant="secondary" className="gap-1 pr-1">
-                <span>{att.filename}</span>
-                <span className="text-muted-foreground">
-                  ({formatBytes(att.size_bytes)})
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setAttachments((prev) => prev.filter((a) => a.id !== att.id))
-                  }
-                  aria-label={`Remove ${att.filename}`}
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="include-quote"
+                checked={includeQuote}
+                onCheckedChange={(checked) => setIncludeQuote(checked === true)}
+              />
+              <Label htmlFor="include-quote" className="text-xs">
+                Include quoted text
+              </Label>
+            </div>
+
+            {snippets.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Snippet</Label>
+                <Select
+                  value={snippetId || undefined}
+                  onValueChange={insertSnippet}
                 >
-                  <XIcon className="size-3" />
-                </button>
-              </Badge>
-            </li>
-          ))}
-        </ul>
-      )}
+                  <SelectTrigger size="sm" className="w-40">
+                    <SelectValue placeholder="Insert snippet…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {snippets.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-      <div className="mt-2 flex justify-end gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={saving || uploading || !body.trim()}
-          onClick={() => void handleSaveDraft()}
-        >
-          Save draft
-        </Button>
-        <Button
-          type="submit"
-          size="sm"
-          disabled={saving || uploading || !body.trim()}
-        >
-          Send email
-        </Button>
-      </div>
-          </form>
-        </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => void handleFileSelect(e.target.files)}
+            />
+            <Button
+              type="button"
+              variant="link"
+              size="xs"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <PaperclipIcon />
+              {uploading ? "Uploading…" : "Attach files"}
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Max {maxAttachmentSizeLabel()} per file
+            </span>
+          </div>
+
+          {attachments.length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {attachments.map((att) => (
+                <li key={att.id}>
+                  <Badge variant="secondary" className="gap-1 pr-1">
+                    <span>{att.filename}</span>
+                    <span className="text-muted-foreground">
+                      ({formatBytes(att.size_bytes)})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAttachments((prev) =>
+                          prev.filter((a) => a.id !== att.id),
+                        )
+                      }
+                      aria-label={`Remove ${att.filename}`}
+                    >
+                      <XIcon className="size-3" />
+                    </button>
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="mt-2 flex justify-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={saving || uploading || !body.trim()}
+              onClick={() => void handleSaveDraft()}
+            >
+              Save draft
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={saving || uploading || !body.trim()}
+            >
+              Send email
+            </Button>
+          </div>
+        </form>
       )}
     </div>
   );

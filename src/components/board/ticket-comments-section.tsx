@@ -1,12 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
 import { PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePersistedExpanded } from "@/hooks/use-persisted-expanded";
 import {
   flattenTicketComments,
   useTicketCommentMutations,
@@ -20,8 +18,6 @@ import {
   MarkdownComposeActions,
 } from "./markdown-compose";
 import { MarkdownContent } from "./markdown-content";
-
-const COMMENTS_EXPANDED_KEY = "ticqex.ticket-comments.expanded.v1";
 
 function CommentRow({
   comment,
@@ -124,10 +120,6 @@ export function TicketCommentsSection({
   ticketId: string;
   threadOrder: CommentThreadOrder;
 }) {
-  const { expanded, toggleExpanded, hydrated } = usePersistedExpanded(
-    COMMENTS_EXPANDED_KEY,
-    true,
-  );
   const commentsQuery = useTicketComments(ticketId, threadOrder);
   const {
     createComment,
@@ -147,7 +139,6 @@ export function TicketCommentsSection({
     [commentsQuery.data?.pages],
   );
 
-  const totalCount = commentsQuery.data?.pages[0]?.meta.total ?? comments.length;
   const saving = isCreating || isUpdating || isDeleting;
   const hasMore = commentsQuery.hasNextPage;
 
@@ -186,105 +177,82 @@ export function TicketCommentsSection({
 
   return (
     <>
-      <div className="flex shrink-0 flex-col border-t border-border">
-        <button
-          type="button"
-          className="flex w-full shrink-0 items-center gap-2 border-b border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
-          aria-expanded={expanded}
-          onClick={toggleExpanded}
-        >
-          {expanded ? (
-            <ChevronDown className="size-3.5 shrink-0" />
-          ) : (
-            <ChevronRight className="size-3.5 shrink-0" />
-          )}
-          Comments
-          {!expanded && (
-            <span className="ml-auto text-xs font-normal text-muted-foreground">
-              {totalCount} {totalCount === 1 ? "comment" : "comments"}
-            </span>
-          )}
-        </button>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="space-y-3 p-4">
+            {commentsQuery.isPending ? (
+              <>
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </>
+            ) : null}
 
-        {hydrated && expanded && (
-          <div className="flex flex-col">
-            <div className="max-h-[min(40vh,360px)] overflow-y-auto overscroll-contain">
-              <div className="space-y-3 p-4">
-                {commentsQuery.isPending ? (
-                  <>
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                  </>
-                ) : null}
+            {commentsQuery.isError ? (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {commentsQuery.error instanceof Error
+                    ? commentsQuery.error.message
+                    : "Failed to load comments"}
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
-                {commentsQuery.isError ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>
-                      {commentsQuery.error instanceof Error
-                        ? commentsQuery.error.message
-                        : "Failed to load comments"}
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
+            {!commentsQuery.isPending &&
+              !commentsQuery.isError &&
+              comments.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No comments yet.
+                </p>
+              )}
 
-                {!commentsQuery.isPending &&
-                  !commentsQuery.isError &&
-                  comments.length === 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      No comments yet.
-                    </p>
-                  )}
+            {comments.map((comment) => (
+              <CommentRow
+                key={comment.id}
+                comment={comment}
+                saving={saving}
+                canManage={comment.can_manage}
+                onEdit={editComment}
+                onDelete={setDeleteTarget}
+              />
+            ))}
 
-                {comments.map((comment) => (
-                  <CommentRow
-                    key={comment.id}
-                    comment={comment}
-                    saving={saving}
-                    canManage={comment.can_manage}
-                    onEdit={editComment}
-                    onDelete={setDeleteTarget}
-                  />
-                ))}
-
-                {hasMore ? (
-                  <div className="flex justify-center pt-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={commentsQuery.isFetchingNextPage}
-                      onClick={() => void commentsQuery.fetchNextPage()}
-                    >
-                      {commentsQuery.isFetchingNextPage
-                        ? "Loading…"
-                        : "Load more"}
-                    </Button>
-                  </div>
-                ) : null}
+            {hasMore ? (
+              <div className="flex justify-center pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={commentsQuery.isFetchingNextPage}
+                  onClick={() => void commentsQuery.fetchNextPage()}
+                >
+                  {commentsQuery.isFetchingNextPage
+                    ? "Loading…"
+                    : "Load more"}
+                </Button>
               </div>
-            </div>
-
-            <div className="shrink-0 space-y-3 border-t border-border p-4">
-              {error ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
-              <MarkdownCompose
-                id={`ticket-comment-compose-${ticketId}`}
-                value={composeBody}
-                onChange={setComposeBody}
-                disabled={saving}
-              />
-              <MarkdownComposeActions
-                onSubmit={() => void submitComment()}
-                submitLabel="Add comment"
-                disabled={saving}
-                submitDisabled={!composeBody.trim()}
-              />
-            </div>
+            ) : null}
           </div>
-        )}
+        </div>
+
+        <div className="shrink-0 space-y-3 border-t border-border p-4">
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          <MarkdownCompose
+            id={`ticket-comment-compose-${ticketId}`}
+            value={composeBody}
+            onChange={setComposeBody}
+            disabled={saving}
+          />
+          <MarkdownComposeActions
+            onSubmit={() => void submitComment()}
+            submitLabel="Add comment"
+            disabled={saving}
+            submitDisabled={!composeBody.trim()}
+          />
+        </div>
       </div>
 
       <DeleteCommentDialog

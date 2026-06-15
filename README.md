@@ -10,6 +10,8 @@
 
 <p align="center">
   <a href="https://github.com/rbouschery/ticqex/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rbouschery/ticqex/ci.yml?branch=main&label=CI" alt="CI"></a>
+  <a href="https://www.npmjs.com/package/@ticqex/cli"><img src="https://img.shields.io/npm/v/@ticqex/cli?label=%40ticqex%2Fcli" alt="@ticqex/cli on npm"></a>
+  <a href="https://www.npmjs.com/package/@ticqex/api-client"><img src="https://img.shields.io/npm/v/@ticqex/api-client?label=%40ticqex%2Fapi-client" alt="@ticqex/api-client on npm"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/rbouschery/ticqex" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/status-pre--1.0-orange" alt="Status: pre-1.0">
   <img src="https://img.shields.io/badge/open--source-free-brightgreen" alt="Open-Source · Free">
@@ -142,17 +144,56 @@ Agents connect like any automation: **REST** (`/api/v1/`*) or **MCP** (`/api/mcp
 
 MCP tools mirror the REST mutations agents need (tickets, board moves, messages, contacts, tags, statuses, custom fields, settings, …); parity is enforced in `tests/unit/mcp-api-parity.test.ts`. API key lifecycle stays in the admin UI and REST only — not exposed over MCP.
 
+### Published packages
+
+Ticqex publishes two public npm packages:
+
+- [`@ticqex/cli`](https://www.npmjs.com/package/@ticqex/cli) — a shell-friendly client for agents, scripts, and release checks.
+- [`@ticqex/api-client`](https://www.npmjs.com/package/@ticqex/api-client) — a small TypeScript client for the REST API.
+
+`@ticqex/api-spec` is intentionally internal. The CLI bundles the operation catalog it needs, so consumers do not need to install or depend on the spec package.
+
 ### Agent CLI (`@ticqex/cli`)
 
-For shell-based agents and scripts, use the published CLI (or `node packages/cli/dist/main.js` from this repo after `pnpm --filter @ticqex/cli... build`):
+For shell-based agents and scripts, run the published CLI:
 
 ```bash
+pnpm dlx @ticqex/cli --help
 ticqex auth login --instance https://your-instance.example.com
 ticqex tickets list --page 1 --json
 ticqex call ticqex_get_ticket --input '{"id":"<uuid>"}'
 ```
 
+`auth login` prompts for an API key from **Settings → API & MCP**. You can also skip stored credentials and pass `--instance` / `--api-key`, or set `TICQEX_INSTANCE` and `TICQEX_API_KEY`.
+
+When developing from this repo, use `node packages/cli/dist/main.js` after `pnpm --filter @ticqex/cli... build`.
+
 See [`packages/cli/README.md`](packages/cli/README.md). Request schemas: [`docs/openapi.yaml`](docs/openapi.yaml).
+
+### TypeScript API client (`@ticqex/api-client`)
+
+Install the client when you want to call Ticqex from an app, worker, integration, or agent runtime:
+
+```bash
+pnpm add @ticqex/api-client
+```
+
+```typescript
+import { TicqexClient } from "@ticqex/api-client";
+
+const client = new TicqexClient({
+  baseUrl: "https://your-instance.example.com",
+  apiKey: process.env.TICQEX_API_KEY!,
+});
+
+const tickets = await client.get("/tickets", { page: 1, per_page: 25 });
+const created = await client.post("/tickets", {
+  subject: "Login issue",
+  contact_email: "user@example.com",
+});
+```
+
+Paths are relative to `/api/v1`; the client adds that prefix for you. See [`packages/api-client/README.md`](packages/api-client/README.md).
 
 OpenAPI spec: [`docs/openapi.yaml`](docs/openapi.yaml) — regenerate with `pnpm openapi:generate`, verify with `pnpm openapi:check`.
 
