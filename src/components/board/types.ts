@@ -18,6 +18,7 @@ export type BoardLane = {
 type BoardTicketBase = {
   id: string;
   title: string;
+  is_pending?: boolean;
   origin: TicketOrigin;
   contact_id: string | null;
   assignee_id: string | null;

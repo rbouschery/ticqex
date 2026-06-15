@@ -75,6 +75,7 @@ export function buildOptimisticBoardTicket(
   return {
     id: tempId,
     title: payload.title,
+    is_pending: true,
     kind: "task",
     channel: null,
     origin: "manual",

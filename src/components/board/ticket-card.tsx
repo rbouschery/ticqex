@@ -113,6 +113,7 @@ function TicketCardActions({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moving, setMoving] = useState(false);
   const deleteCopy = ticketDeleteCopy(ticket.kind);
+  const isPending = ticket.is_pending === true;
 
   const canMove =
     statusId != null &&
@@ -156,6 +157,30 @@ function TicketCardActions({
     } finally {
       setMoving(false);
     }
+  }
+
+  if (isPending) {
+    return (
+      <div
+        className={cn(
+          "flex shrink-0 items-center gap-0.5",
+          sortable && "pointer-events-auto",
+        )}
+        onPointerDown={stopCardPointerEvent}
+        onClick={stopCardPointerEvent}
+      >
+        <Button
+          type="button"
+          variant="secondary"
+          size="xs"
+          className="cursor-wait"
+          aria-label="Ticket is still being created"
+          disabled
+        >
+          Creating...
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -406,6 +431,7 @@ export function TicketCard({
   sortable?: boolean;
   fieldLayout?: ResolvedTicketFieldLayout | null;
 }) {
+  const isPending = ticket.is_pending === true;
   const {
     attributes,
     listeners,
@@ -415,7 +441,7 @@ export function TicketCard({
     isDragging,
   } = useSortable({
     id: ticket.id,
-    disabled: dragOverlay || !sortable,
+    disabled: dragOverlay || !sortable || isPending,
   });
 
   const style = transform
@@ -431,12 +457,19 @@ export function TicketCard({
     <div
       ref={dragOverlay ? undefined : setNodeRef}
       style={style}
-      {...(dragOverlay || !sortable ? {} : { ...attributes, ...listeners })}
-      onClick={!dragOverlay ? onClick : undefined}
+      {...(dragOverlay || !sortable || isPending
+        ? {}
+        : { ...attributes, ...listeners })}
+      onClick={!dragOverlay && !isPending ? onClick : undefined}
+      aria-disabled={isPending || undefined}
       className={cn(
         "relative rounded-xl outline-none focus:outline-none focus-visible:outline-none",
-        sortable && !dragOverlay && "cursor-grab touch-none active:cursor-grabbing",
-        !sortable && !dragOverlay && "cursor-pointer",
+        sortable &&
+          !dragOverlay &&
+          !isPending &&
+          "cursor-grab touch-none active:cursor-grabbing",
+        !sortable && !dragOverlay && !isPending && "cursor-pointer",
+        isPending && !dragOverlay && "cursor-wait opacity-75",
         isDragging && !dragOverlay && "opacity-0",
         dragOverlay && "shadow-lg",
       )}

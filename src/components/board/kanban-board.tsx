@@ -117,6 +117,8 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
 
   const openTicket = useCallback(
     (ticket: BoardTicket) => {
+      if (ticket.is_pending) return;
+
       const ticketId = ticket.id;
       void queryClient.prefetchQuery({
         queryKey: ticketSummaryQueryKey(ticketId),
