@@ -1,6 +1,6 @@
 # @ticqex/cli
 
-Command-line interface for the Ticqex REST API (`/api/v1`).
+Headless command-line interface for the Ticqex REST API (`/api/v1`).
 
 Full request schemas: [`docs/openapi.yaml`](../../docs/openapi.yaml) in the repo root (regenerate with `pnpm openapi:generate`).
 
@@ -45,7 +45,7 @@ Create API keys in Ticqex under **Settings → API & MCP**. `auth login` prompts
 
 ## Usage
 
-Execute any MCP-parity operation by name:
+Execute any MCP-parity operation by name from a shell, script, or agent runtime:
 
 ```bash
 ticqex call ticqex_get_me

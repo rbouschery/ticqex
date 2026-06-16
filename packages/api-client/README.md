@@ -1,6 +1,6 @@
 # @ticqex/api-client
 
-TypeScript client for the [Ticqex](https://github.com/rbouschery/ticqex) REST API (`/api/v1`).
+TypeScript client for headless access to the [Ticqex](https://github.com/rbouschery/ticqex) REST API (`/api/v1`).
 
 ## Install
 
@@ -28,7 +28,7 @@ const created = await client.post("/tickets", {
 const tickets = await client.get("/tickets", { page: 1, per_page: 25 });
 ```
 
-Create API keys in Ticqex under **Settings → API & MCP**. Use the same key for REST, MCP, the CLI, and this client.
+Create API keys in Ticqex under **Settings → API & MCP**. Use the same key for REST, MCP, the CLI, and this client when running Ticqex headlessly.
 
 ## API
 

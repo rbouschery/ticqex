@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>A thin UX and data layer for support and helpdesk — where humans and AI agents work the same queue, together.</strong>
+  <strong>A thin UX and headless data layer for support and helpdesk — where humans and AI agents work the same queue, together.</strong>
 </p>
 
 <hr />
@@ -19,7 +19,7 @@
 
 ## What is Ticqex?
 
-Ticqex is a flexible, customizable support desk built on one idea: humans and AI agents are both first-class operators. Tickets live on a Kanban board for people to work, but every action — creating and editing tickets, adding lanes, defining custom fields — is equally available over API and MCP.
+Ticqex is a flexible, customizable support desk built on one idea: humans and AI agents are both first-class operators. Tickets live on a Kanban board for people to work, but every action — creating and editing tickets, adding lanes, defining custom fields — is equally available over API and MCP. Use it through the admin UX, or run it completely headless through REST, MCP, the TypeScript API client, or the CLI.
 
 Ticqex is agent-agnostic. Plug in whatever agent you prefer — Claude, Codex, Cursor, Pi, OpenClaw, Hermes. If it can call an API or MCP, it works with Ticqex.
 
@@ -134,9 +134,9 @@ You need a Supabase project, a Vercel project connected to this repo, a Resend a
 | `SUPPORT_EMAIL` / `SUPPORT_FROM_NAME`      | init / you                                            | Outbound From address and display name               |
 
 
-## Connect an agent (API & MCP)
+## Connect an agent (headless API & MCP)
 
-Agents connect like any automation: **REST** (`/api/v1/`*) or **MCP** (`/api/mcp`), both authenticated with a Bearer API key.
+Agents and other headless clients connect like any automation: **REST** (`/api/v1/`*) or **MCP** (`/api/mcp`), both authenticated with a Bearer API key.
 
 1. Sign in as an admin and open **Settings → API & MCP**.
 2. Create an API key and copy it once (it is not shown again).
@@ -148,8 +148,8 @@ MCP tools mirror the REST mutations agents need (tickets, board moves, messages,
 
 Ticqex publishes two public npm packages:
 
-- [`@ticqex/cli`](https://www.npmjs.com/package/@ticqex/cli) — a shell-friendly client for agents, scripts, and release checks.
-- [`@ticqex/api-client`](https://www.npmjs.com/package/@ticqex/api-client) — a small TypeScript client for the REST API.
+- [`@ticqex/cli`](https://www.npmjs.com/package/@ticqex/cli) — a shell-friendly headless client for agents, scripts, and release checks.
+- [`@ticqex/api-client`](https://www.npmjs.com/package/@ticqex/api-client) — a small TypeScript client for headless REST API integrations.
 
 `@ticqex/api-spec` is intentionally internal. The CLI bundles the operation catalog it needs, so consumers do not need to install or depend on the spec package.
 
