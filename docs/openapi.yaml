@@ -7,20 +7,46 @@ info:
   description: "REST JSON API for Ticqex at /api/v1. Authenticate with Authorization: Bearer tq_live_* (API key) or a
     staff Supabase JWT."
 servers:
-  - url: https://your-instance.com/api/v1
-    description: Replace with your Ticqex deployment host.
+  - url: https://{instanceHost}/api/v1
+    description: Your Ticqex deployment.
+    variables:
+      instanceHost:
+        default: your-instance.com
+        description: Hostname of your Ticqex deployment, without protocol or path.
 tags:
   - name: api_keys
+    description: Create and revoke API keys for REST, MCP, and CLI access.
+    x-displayName: API keys
   - name: board
+    description: Kanban board views, lane ordering, and ticket moves.
+    x-displayName: Board
   - name: contacts
+    description: Customer and contact records linked to tickets.
+    x-displayName: Contacts
   - name: custom_fields
+    description: Ticket and contact field definitions and ordering.
+    x-displayName: Custom fields
   - name: email_snippets
+    description: Reusable canned responses for outbound email.
+    x-displayName: Email snippets
   - name: messages
+    description: Message attachments and signed download URLs.
+    x-displayName: Messages
   - name: settings
+    description: Workspace configuration and preferences.
+    x-displayName: Settings
   - name: statuses
+    description: Ticket workflow statuses and lane ordering.
+    x-displayName: Statuses
   - name: tags
+    description: Labels applied to tickets for filtering and organization.
+    x-displayName: Tags
   - name: tickets
+    description: Tickets, messages, drafts, comments, and read state.
+    x-displayName: Tickets
   - name: users
+    description: Staff users and the authenticated session identity.
+    x-displayName: Users
 paths:
   /users/me:
     get:
@@ -148,46 +174,55 @@ paths:
           required: false
           schema:
             type: integer
+          description: Page number (1-based).
         - name: per_page
           in: query
           required: false
           schema:
             type: integer
+          description: Number of items per page.
         - name: status_id
           in: query
           required: false
           schema:
             type: string
+          description: Filter tickets by status UUID.
         - name: assignee_id
           in: query
           required: false
           schema:
             type: string
+          description: Filter tickets by assignee user UUID.
         - name: contact_id
           in: query
           required: false
           schema:
             type: string
+          description: Filter tickets by contact UUID.
         - name: origin
           in: query
           required: false
           schema:
             type: string
+          description: Filter tickets by origin (for example email, api, or manual).
         - name: kind
           in: query
           required: false
           schema:
             type: string
+          description: Filter tickets by kind.
         - name: channel
           in: query
           required: false
           schema:
             type: string
+          description: Filter tickets by channel identifier.
         - name: tag
           in: query
           required: false
           schema:
             type: string
+          description: Filter tickets by tag name.
         - name: custom_fields.{key}
           in: query
           required: false
@@ -629,11 +664,13 @@ paths:
           required: false
           schema:
             type: integer
+          description: Page number (1-based).
         - name: per_page
           in: query
           required: false
           schema:
             type: integer
+          description: Number of items per page.
     post:
       operationId: ticqex_create_ticket_comment
       summary: Create ticket comment
@@ -1176,16 +1213,31 @@ paths:
     get:
       operationId: ticqex_get_attachment_url
       summary: Get attachment url
-      description: "MCP tool: `ticqex_get_attachment_url`."
+      description: "By default this endpoint responds with a 302 redirect to a signed URL. Pass format=json to receive `{
+        data: { url } }` instead. MCP tool: `ticqex_get_attachment_url`."
       tags:
         - messages
       responses:
         "200":
-          description: Success
+          description: "Returned when format=json. Wraps the signed URL in the standard `{ data: { url } }` envelope."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DataEnvelope"
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AttachmentUrlData"
+        "302":
+          description: Redirects to a time-limited signed URL for the attachment. This is the default response when format is
+            omitted.
+          headers:
+            Location:
+              description: Signed attachment URL.
+              schema:
+                type: string
+                format: uri
         "400":
           description: Bad request
           content:
@@ -1225,11 +1277,20 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: force_download
+        - name: download
           in: query
           required: false
           schema:
             type: boolean
+          description: When true, force the signed URL to include a Content-Disposition attachment header.
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - json
+          description: 'Response format. Use "json" to receive `{ data: { url } }` instead of a redirect.'
   /tickets/{ticket_id}/attachment-uploads:
     post:
       operationId: ticqex_stage_ticket_attachment_upload
@@ -1329,16 +1390,19 @@ paths:
           required: false
           schema:
             type: string
+          description: Board filter expression.
         - name: sort
           in: query
           required: false
           schema:
             type: string
+          description: Sort order for board or lane results.
         - name: q
           in: query
           required: false
           schema:
             type: string
+          description: Search query for the board.
   /board/filter-options:
     get:
       operationId: ticqex_get_board_filter_options
@@ -1431,21 +1495,25 @@ paths:
           required: false
           schema:
             type: integer
+          description: Zero-based offset for pagination.
         - name: limit
           in: query
           required: false
           schema:
             type: integer
+          description: Maximum number of items to return.
         - name: filter
           in: query
           required: false
           schema:
             type: string
+          description: Board filter expression.
         - name: sort
           in: query
           required: false
           schema:
             type: string
+          description: Sort order for board or lane results.
   /board/lanes/{status_id}/order:
     put:
       operationId: ticqex_set_board_lane_order
@@ -2281,6 +2349,16 @@ paths:
                 $ref: "#/components/schemas/ApiError"
       security:
         - bearerAuth: []
+      parameters:
+        - name: group
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - ticket
+              - contact
+          description: Filter custom field definitions by group. One of "ticket" or "contact".
     post:
       operationId: ticqex_create_custom_field
       summary: Create custom field
@@ -2855,6 +2933,15 @@ components:
         meta:
           type: object
           additionalProperties: true
+    AttachmentUrlData:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Time-limited signed URL for the attachment.
     AttachmentUploadRequest:
       type: object
       required:

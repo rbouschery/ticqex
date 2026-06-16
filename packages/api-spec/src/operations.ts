@@ -190,7 +190,7 @@ export const OPERATION_CATALOG: OperationDefinition[] = [
     method: "GET",
     pathTemplate: "/messages/:message_id/attachments/:attachment_id",
     pathParams: ["message_id", "attachment_id"],
-    queryParams: ["force_download"],
+    queryParams: ["download", "format"],
   },
   {
     name: "ticqex_stage_ticket_attachment_upload",
@@ -355,7 +355,7 @@ export const OPERATION_CATALOG: OperationDefinition[] = [
     method: "GET",
     pathTemplate: "/custom-fields",
     pathParams: [],
-    queryParams: [],
+    queryParams: ["group"],
   },
   {
     name: "ticqex_create_custom_field",
