@@ -216,6 +216,7 @@ OpenAPI spec: [`docs/openapi.yaml`](docs/openapi.yaml) — regenerate with `pnpm
 | `pnpm openapi:generate` / `openapi:check`      | Generate or verify `docs/openapi.yaml`                                  |
 | `pnpm build:packages` / `test:packages`        | Build and test `@ticqex/*` workspace packages                           |
 | `pnpm seed:board-load`                         | Optional: large board dataset for manual load testing                   |
+| `pnpm seed:cedar-crm-demo`                     | Optional: 10-ticket Cedar CRM demo with fields and tags                 |
 
 
 ## Tests

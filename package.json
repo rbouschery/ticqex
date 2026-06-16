@@ -55,7 +55,8 @@
     "openapi:generate": "pnpm --filter @ticqex/api-spec build && tsx scripts/generate-openapi.ts",
     "openapi:check": "pnpm --filter @ticqex/api-spec build && tsx scripts/generate-openapi.ts --check",
     "seed:board-load": "tsx --env-file=.env.local scripts/seed-board-load.ts",
-    "seed:long-email-demo": "tsx --env-file=.env.local scripts/seed-long-email-demo.ts"
+    "seed:long-email-demo": "tsx --env-file=.env.local scripts/seed-long-email-demo.ts",
+    "seed:cedar-crm-demo": "tsx --env-file=.env.local scripts/seed-cedar-crm-demo.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
