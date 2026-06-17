@@ -32,6 +32,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.101.0
         version: 5.101.0(react@19.2.7)
+      '@ticqex/api-spec':
+        specifier: workspace:*
+        version: link:packages/api-spec
       cal-sans:
         specifier: ^1.0.1
         version: 1.0.1
@@ -90,9 +93,6 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.0
-      '@ticqex/api-spec':
-        specifier: workspace:*
-        version: link:packages/api-spec
       '@types/node':
         specifier: ^25
         version: 25.9.2
