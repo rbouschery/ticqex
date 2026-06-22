@@ -455,7 +455,7 @@ async function init(args: string[]): Promise<void> {
 
   runPnpm(["config:sync"]);
   console.log(
-    "\nInit complete. Run `pnpm config:check` and `pnpm env:verify` to validate setup.",
+    "\nInit complete. Run `pnpm dev` to start the app.",
   );
 }
 
