@@ -245,10 +245,10 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
 
   const patchTicketUnread = useCallback(
     (ticketId: string, unreadCount: number) => {
-      queryClient.setQueriesData<BoardResponse>(
-        { queryKey: ["board"] },
+      queryClient.setQueryData<BoardResponse>(
+        boardQuery.queryKey,
         (current) => {
-          if (!current) return current;
+          if (!current?.lanes) return current;
           return {
             ...current,
             lanes: current.lanes.map((lane) => ({
@@ -263,7 +263,7 @@ export function KanbanBoard({ children }: { children?: ReactNode }) {
         },
       );
     },
-    [queryClient],
+    [queryClient, boardQuery.queryKey],
   );
 
   const handleBoardChange = useCallback(
