@@ -40,7 +40,7 @@ Ticqex is built with Next.js and runs on Supabase, leveraging its Postgres datab
 Prerequisites: Node 20+ (dev pinned to 22, see `[.nvmrc](./.nvmrc)`), [pnpm](https://pnpm.io/), [Docker](https://www.docker.com/) (for local Supabase).
 
 ```bash
-pnpm install
+pnpm install       # also builds workspace packages (@ticqex/api-spec, etc.)
 pnpm ticqex init   # interactive: local Supabase, channels, env
 pnpm dev
 ```
@@ -60,7 +60,7 @@ What `init` does:
 The explicit equivalent of `init`, useful for CI or full control:
 
 ```bash
-pnpm install
+pnpm install       # builds workspace packages
 cp config/ticqex.config.example.json config/ticqex.config.json   # disable email here if unwanted
 cp .env.example .env.local
 pnpm db:start        # local Supabase (Docker); if stale: pnpm db:stop && pnpm db:start

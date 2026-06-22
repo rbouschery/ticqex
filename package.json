@@ -30,6 +30,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "postinstall": "pnpm build:packages",
     "dev": "next dev",
     "build": "pnpm --filter @ticqex/api-spec build && next build",
     "start": "next start",

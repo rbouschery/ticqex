@@ -432,11 +432,20 @@ async function configureChannelsAndIntegrations(
   console.log(`  ${displayPath(CONFIG_FILE)}`);
 }
 
+function ensureWorkspacePackagesBuilt(): void {
+  const apiSpecEntry = path.join(ROOT, "packages/api-spec/dist/index.js");
+  if (fs.existsSync(apiSpecEntry)) return;
+
+  console.log("Building workspace packages...");
+  runPnpm(["build:packages"]);
+}
+
 async function init(args: string[]): Promise<void> {
   const supabaseTarget = parseSupabaseTarget(args);
   let rl = createReadline();
 
   try {
+    ensureWorkspacePackagesBuilt();
     console.log("Ticqex init\n");
     rl = await setupSupabase(rl, supabaseTarget);
     await configureChannelsAndIntegrations(rl);
