@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@ticqex/api-spec": "workspace:*",
-    "@types/node": "^25",
+    "@types/node": "^26",
     "tsup": "^8.5.1",
     "typescript": "^5",
     "vitest": "^4.1.9"

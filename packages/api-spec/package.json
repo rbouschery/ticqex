@@ -38,7 +38,7 @@
     "access": "public"
   },
   "devDependencies": {
-    "@types/node": "^25",
+    "@types/node": "^26",
     "typescript": "^5",
     "vitest": "^4.1.9"
   }
