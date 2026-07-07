@@ -60,7 +60,6 @@
     "seed:cedar-crm-demo": "tsx --env-file=.env.local scripts/seed-cedar-crm-demo.ts"
   },
   "dependencies": {
-    "@ticqex/api-spec": "workspace:*",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -69,13 +68,14 @@
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.0",
     "@tanstack/react-query": "^5.101.2",
+    "@ticqex/api-spec": "workspace:*",
     "cal-sans": "^1.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "lucide-react": "^1.23.0",
     "mcp-handler": "^1.1.0",
-    "next": "16.2.9",
+    "next": "16.2.10",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.6.2",
     "react": "19.2.7",
