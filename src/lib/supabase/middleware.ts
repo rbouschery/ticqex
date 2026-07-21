@@ -5,14 +5,20 @@ function isMcpRoute(pathname: string) {
   return pathname === "/api/mcp" || pathname.startsWith("/api/mcp/");
 }
 
+function isWellKnownRoute(pathname: string) {
+  return pathname === "/.well-known" || pathname.startsWith("/.well-known/");
+}
+
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isHealth = pathname === "/api/health";
   const isMcp = isMcpRoute(pathname);
   const isWebhook = pathname.startsWith("/api/webhooks");
+  const isWellKnown = isWellKnownRoute(pathname);
   const isApiV1 = pathname.startsWith("/api/v1");
 
-  if (isHealth || isMcp || isWebhook) {
+  // Skip login redirect for machine clients (MCP, webhooks, OAuth probes).
+  if (isHealth || isMcp || isWebhook || isWellKnown) {
     return NextResponse.next({ request });
   }
 
