@@ -1,6 +1,7 @@
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import type { AuthedRequest } from "@server/mcp/create-handler";
 
-type McpHandler = (req: Request) => Response | Promise<Response>;
+type McpHandler = (req: AuthedRequest) => Response | Promise<Response>;
 type VerifyToken = (
   req: Request,
   bearerToken?: string,
@@ -17,9 +18,9 @@ export function withApiKeyMcpAuth(
   verifyToken: VerifyToken,
 ): McpHandler {
   return async (req) => {
-    // Streamable HTTP is POST-only. mcp-handler returns 405 for GET/DELETE.
-    // Do not 401 those probes — MCP clients treat GET 401 as "start OAuth",
-    // and GET 405 as "no standalone SSE stream" (expected).
+    // Streamable HTTP is POST-only. Return 405 for GET/DELETE probes without
+    // 401 — MCP clients treat GET 401 as "start OAuth", and GET 405 as
+    // "no standalone SSE stream" (expected).
     if (req.method === "GET" || req.method === "DELETE") {
       return handler(req);
     }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import type { AuthedRequest } from "@server/mcp/create-handler";
 import { withApiKeyMcpAuth } from "@server/mcp/with-api-key-auth";
 
 describe("withApiKeyMcpAuth", () => {
@@ -45,7 +46,7 @@ describe("withApiKeyMcpAuth", () => {
       clientId: "key-1",
       scopes: ["ticqex:read"],
     };
-    const handler = vi.fn(async (req: Request) => {
+    const handler = vi.fn(async (req: AuthedRequest) => {
       expect(req.auth).toEqual(authInfo);
       return new Response("ok");
     });

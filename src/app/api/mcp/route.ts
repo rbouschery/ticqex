@@ -1,28 +1,13 @@
-import { createMcpHandler } from "mcp-handler";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { authenticateApiKeyToken } from "@server/middleware/auth";
-import { registerTicqexTools } from "@server/mcp/tools";
+import { createTicqexMcpHandler } from "@server/mcp/create-handler";
 import { withApiKeyMcpAuth } from "@server/mcp/with-api-key-auth";
 import { recordFailedAuthActivity } from "@server/services/activity";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
-const handler = createMcpHandler(
-  (server) => {
-    registerTicqexTools(server);
-  },
-  {
-    serverInfo: {
-      name: "ticqex",
-      version: "0.1.0",
-    },
-  },
-  {
-    basePath: "/api",
-    disableSse: true,
-    maxDuration: 60,
-  },
-);
+const handler = createTicqexMcpHandler();
 
 async function verifyApiKey(
   _request: Request,

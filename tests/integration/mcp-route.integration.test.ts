@@ -39,6 +39,9 @@ async function mcp<T>(apiKey: string, id: number, method: string, params = {}) {
   if (!res.ok) {
     throw new Error(`MCP ${method} failed with HTTP ${res.status}: ${text}`);
   }
+  const contentType = res.headers.get("content-type") ?? "";
+  expect(contentType).toContain("application/json");
+  expect(contentType).not.toContain("text/event-stream");
   const json = parseMcpResponse<T>(text);
   if (json.error) {
     throw new Error(`MCP ${method} failed: ${json.error.message}`);

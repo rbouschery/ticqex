@@ -59,16 +59,21 @@ export function McpSettingsSection() {
         {
           id: "cursor",
           name: "Cursor",
-          description: "Remote Streamable HTTP MCP server in mcp.json.",
+          description:
+            "Stdio bridge via mcp-remote (more reliable than Cursor’s remote HTTP channel).",
           filename: "mcp.json",
           config: JSON.stringify(
             {
               mcpServers: {
                 ticqex: {
-                  url: endpoint,
-                  headers: {
-                    Authorization: `Bearer ${PLACEHOLDER_API_KEY}`,
-                  },
+                  command: "npx",
+                  args: [
+                    "-y",
+                    "mcp-remote",
+                    endpoint,
+                    "--header",
+                    `Authorization: Bearer ${PLACEHOLDER_API_KEY}`,
+                  ],
                 },
               },
             },
