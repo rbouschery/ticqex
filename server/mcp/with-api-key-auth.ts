@@ -17,6 +17,13 @@ export function withApiKeyMcpAuth(
   verifyToken: VerifyToken,
 ): McpHandler {
   return async (req) => {
+    // Streamable HTTP is POST-only. mcp-handler returns 405 for GET/DELETE.
+    // Do not 401 those probes — MCP clients treat GET 401 as "start OAuth",
+    // and GET 405 as "no standalone SSE stream" (expected).
+    if (req.method === "GET" || req.method === "DELETE") {
+      return handler(req);
+    }
+
     const authHeader = req.headers.get("Authorization");
     const [type, token] = authHeader?.split(" ") ?? [];
     const bearerToken =

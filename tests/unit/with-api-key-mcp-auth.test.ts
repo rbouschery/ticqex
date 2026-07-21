@@ -3,11 +3,13 @@ import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { withApiKeyMcpAuth } from "@server/mcp/with-api-key-auth";
 
 describe("withApiKeyMcpAuth", () => {
-  it("returns 401 without resource_metadata when Authorization is missing", async () => {
+  it("returns 401 without resource_metadata when POST Authorization is missing", async () => {
     const handler = vi.fn(async () => new Response("ok"));
     const wrapped = withApiKeyMcpAuth(handler, async () => undefined);
 
-    const res = await wrapped(new Request("https://example.com/api/mcp"));
+    const res = await wrapped(
+      new Request("https://example.com/api/mcp", { method: "POST" }),
+    );
 
     expect(res.status).toBe(401);
     const www = res.headers.get("WWW-Authenticate") ?? "";
@@ -16,7 +18,28 @@ describe("withApiKeyMcpAuth", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it("attaches auth and calls handler for a valid Bearer token", async () => {
+  it("lets unauthenticated GET reach the handler (SSE probe → 405, not OAuth)", async () => {
+    const handler = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: "method not allowed" }), {
+          status: 405,
+          headers: { Allow: "POST" },
+        }),
+    );
+    const wrapped = withApiKeyMcpAuth(handler, async () => undefined);
+
+    const res = await wrapped(
+      new Request("https://example.com/api/mcp", {
+        method: "GET",
+        headers: { Accept: "text/event-stream" },
+      }),
+    );
+
+    expect(res.status).toBe(405);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it("attaches auth and calls handler for a valid Bearer token on POST", async () => {
     const authInfo: AuthInfo = {
       token: "tq_live_test",
       clientId: "key-1",
@@ -32,6 +55,7 @@ describe("withApiKeyMcpAuth", () => {
 
     const res = await wrapped(
       new Request("https://example.com/api/mcp", {
+        method: "POST",
         headers: { Authorization: "Bearer tq_live_test" },
       }),
     );

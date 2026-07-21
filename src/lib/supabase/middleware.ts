@@ -5,6 +5,16 @@ function isMcpRoute(pathname: string) {
   return pathname === "/api/mcp" || pathname.startsWith("/api/mcp/");
 }
 
+/** Legacy SSE paths some clients probe; never redirect them to HTML /login. */
+function isLegacyMcpSseRoute(pathname: string) {
+  return (
+    pathname === "/api/sse" ||
+    pathname.startsWith("/api/sse/") ||
+    pathname === "/api/message" ||
+    pathname.startsWith("/api/message/")
+  );
+}
+
 function isWellKnownRoute(pathname: string) {
   return pathname === "/.well-known" || pathname.startsWith("/.well-known/");
 }
@@ -13,12 +23,13 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isHealth = pathname === "/api/health";
   const isMcp = isMcpRoute(pathname);
+  const isLegacyMcpSse = isLegacyMcpSseRoute(pathname);
   const isWebhook = pathname.startsWith("/api/webhooks");
   const isWellKnown = isWellKnownRoute(pathname);
   const isApiV1 = pathname.startsWith("/api/v1");
 
   // Skip login redirect for machine clients (MCP, webhooks, OAuth probes).
-  if (isHealth || isMcp || isWebhook || isWellKnown) {
+  if (isHealth || isMcp || isLegacyMcpSse || isWebhook || isWellKnown) {
     return NextResponse.next({ request });
   }
 
