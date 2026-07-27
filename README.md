@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./public/web-app-manifest-192x192.png" alt="Ticqex" width="96" height="96">
+  <img src="docs/assets/logo.png" alt="Ticqex" width="96" height="96">
 </p>
 
 <p align="center">
