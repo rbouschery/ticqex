@@ -17,6 +17,10 @@
   <img src="https://img.shields.io/badge/open--source-free-brightgreen" alt="Open-Source · Free">
 </p>
 
+<p align="center">
+  <img src="docs/assets/preview.png" alt="Ticqex — open-source helpdesk built for agent-human collaboration" width="800">
+</p>
+
 ## What is Ticqex?
 
 Ticqex is a flexible, customizable support desk built on one idea: humans and AI agents are both first-class operators. Tickets live on a Kanban board for people to work, but every action — creating and editing tickets, adding lanes, defining custom fields — is equally available over API and MCP. Use it through the admin UX, or run it completely headless through REST, MCP, the TypeScript API client, or the CLI.
