@@ -95,10 +95,10 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
     "eslint": "^9",
-    "eslint-config-next": "16.2.12",
-    "supabase": "^2.111.0",
+    "eslint-config-next": "16.3.0",
+    "supabase": "^2.112.0",
     "tailwindcss": "^4",
-    "tsx": "^4.23.1",
+    "tsx": "^4.23.11",
     "typescript": "^5",
     "vitest": "^4.1.10",
     "yaml": "^2.8.2"
