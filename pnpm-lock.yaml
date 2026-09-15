@@ -24,8 +24,8 @@ importers:
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.8(react@19.3.0))(react@19.3.0)
       '@supabase/ssr':
-        specifier: ^0.12.5
-        version: 0.12.6(@supabase/supabase-js@2.116.0(@opentelemetry/api@1.9.0))
+        specifier: ^0.12.7
+        version: 0.12.7(@supabase/supabase-js@2.116.0(@opentelemetry/api@1.9.0))
       '@supabase/supabase-js':
         specifier: ^2.116.0
         version: 2.116.0(@opentelemetry/api@1.9.0)
@@ -2285,8 +2285,8 @@ packages:
     resolution: {integrity: sha512-MHAnlXxi2s6yiJsZsQMfs2B3RFxeVfQWxerqYhIMqcCQV/FuY3LIeouPEkXw/ah7wUWMLYwempF9MOCUScyddg==}
     engines: {node: '>=22.0.0'}
 
-  '@supabase/ssr@0.12.6':
-    resolution: {integrity: sha512-JQ/hwN71p0HXWiETjCAY4sn51NeXCFj1s9l7/WQDp5O9yuF2HSja+rtjR6NWK4G3HigyNxYGwGKXabb4eYZy+Q==}
+  '@supabase/ssr@0.12.7':
+    resolution: {integrity: sha512-wiBtEie1KkRJi9RrZWY3R2imRhX1JY7qMyUCH2z9AUk15gQebNEplM+urbCKamdxaTJLXUU6LlpkJsaxhojCEg==}
     peerDependencies:
       '@supabase/supabase-js': ^2.114.0
 
@@ -7437,7 +7437,7 @@ snapshots:
       '@supabase/phoenix': 0.4.5
       tslib: 2.8.1
 
-  '@supabase/ssr@0.12.6(@supabase/supabase-js@2.116.0(@opentelemetry/api@1.9.0))':
+  '@supabase/ssr@0.12.7(@supabase/supabase-js@2.116.0(@opentelemetry/api@1.9.0))':
     dependencies:
       '@supabase/supabase-js': 2.116.0(@opentelemetry/api@1.9.0)
       cookie: 1.1.1
