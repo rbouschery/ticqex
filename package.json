@@ -69,7 +69,7 @@
     "@supabase/supabase-js": "^2.117.2",
     "@tanstack/react-query": "^5.104.0",
     "@ticqex/api-spec": "workspace:*",
-    "cal-sans": "^1.0.1",
+    "cal-sans": "^2.0.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
