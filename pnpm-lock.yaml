@@ -36,8 +36,8 @@ importers:
         specifier: workspace:*
         version: link:packages/api-spec
       cal-sans:
-        specifier: ^1.0.1
-        version: 1.0.1
+        specifier: ^2.1.1
+        version: 2.1.1
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2715,8 +2715,8 @@ packages:
     resolution: {integrity: sha512-LMDU/U2yA4IPIY8KT0NsNPWEYZvAMkbgyspxJ6btJaYV+WMDOHAZCmB0lsTObiHaRS1V/ztKAl7+TSkTqXyeoA==}
     engines: {node: '>=20.19.0'}
 
-  cal-sans@1.0.1:
-    resolution: {integrity: sha512-XwN3/7jez8WmFVcNnNqO2K9lh133KiIcURCyGFnSM+ZmNZ8zIcOTNfr3SpenLAkRceYsq+fQNX/PL4C1rIkEPQ==}
+  cal-sans@2.1.1:
+    resolution: {integrity: sha512-Aze+2yZNbKtzUvi17PjHkmja1CMvse1oyPs3GTn61nfNvaJhVGf13qtwgG3Zu1IunVL1mTVpaWcBBOPpTN0Dkg==}
 
   call-bind-apply-helpers@1.0.2:
     resolution: {integrity: sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==}
@@ -7750,7 +7750,7 @@ snapshots:
 
   cac@7.1.0: {}
 
-  cal-sans@1.0.1: {}
+  cal-sans@2.1.1: {}
 
   call-bind-apply-helpers@1.0.2:
     dependencies:
